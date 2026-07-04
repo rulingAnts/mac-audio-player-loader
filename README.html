@@ -51,7 +51,7 @@
     box-shadow:0 1px 4px rgba(0,0,0,.06);
   }
   figcaption{color:var(--muted); font-size:.82rem; margin-top:6px; text-align:center;}
-  table{border-collapse:collapse; width:100%; margin:1em 0; font-size:.95rem;}
+  table{border-collapse:collapse; width:100%; margin:1em 0; font-size:.95rem; display:block; overflow-x:auto;}
   th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top;}
   th{background:var(--accent-soft);}
   td code{white-space:nowrap;}
@@ -83,6 +83,11 @@
   .hero h1{margin:.05em 0 0;}
   .tablink{color:var(--accent); font-weight:600; text-decoration:underline; text-underline-offset:2px; cursor:pointer;}
   .tablink:hover{opacity:.82;}
+  /* --- Collapsible "check your device's format" helper --- */
+  details.fscheck{border:1px solid var(--line); border-radius:8px; padding:2px 16px; margin:1.1em 0; background:#fafbfc;}
+  details.fscheck > summary{cursor:pointer; font-weight:600; color:var(--accent); padding:12px 2px; list-style-position:inside;}
+  details.fscheck[open] > summary{border-bottom:1px solid var(--line); margin-bottom:10px;}
+  details.fscheck table{font-size:.9rem;}
 </style>
 </head>
 <body>
@@ -535,27 +540,99 @@
 
 <p>Solar/rechargeable audio-Bible players used widely in missions. <em>Not yet tested with this tool, but expected to work.</em> Connect MegaVoice's <strong>SLS data cable</strong> and the player's storage — its internal memory, plus the microSD card too if one is inserted — mounts on the Mac as an <strong>ordinary writable USB drive</strong>. From there the mechanism is the same one SaberCopy uses: wipe the volume and write the files in the right order (which this tool does). SaberCopy is smarter, more customizable and friendlier, but the underlying principle is identical — so as long as you match MegaVoice's folder structure, filenames, and supported formats, this tool should load it. (The microSD is <em>not</em> the main path — the cable is — and where a card is used it follows the same strict structure rules as the internal memory.)</p>
 
+<p>MegaVoice does <strong>not</strong> use one universal folder layout — <em>the required structure differs by model</em>, and every model plays files in <strong>name-sort order</strong>, so zero-padded numeric prefixes (<code>001</code>, <code>002</code>…) are what guarantee correct playback for a copy-in-sorted-order tool. The table below summarizes each family; see the <strong>Loading docs</strong> links for the authoritative manufacturer PDF.</p>
+<div class="callout warn"><strong>Envision is the key exception.</strong> It is the one model that even reads a copied folder tree from external microSD/USB-OTG, but external media <strong>requires MegaVoice's Windows encryption</strong> (adds a <code>$ME</code> token to each filename, e.g. <code>name$ME.mp4</code>). Plain, unencrypted files on a FAT32 card are <strong>skipped/ignored</strong> — Envision is <strong>not loadable</strong> with a plain FAT copy.</div>
+<div class="callout"><strong>Loading method matters.</strong> The classic solar audio-only players (Ambassador, Messenger, LifeLight, Pathway, Envoy 3, PocketVoice) do not mount as a plain USB/FAT drive — their onboard memory is programmed only via MegaVoice's Windows <code>SaberCopy</code> app plus a proprietary <em>SLS</em> cable. Where these have a microSD slot, SaberCopy can prepare the card. Envoy 2 S/E series, Companion/Shield, and Herald can be loaded by writing a correctly-built tree directly to their FAT32 storage/microSD.</div>
 <table>
-<tr><th>Model</th><th>Loads via</th><th>Notes</th></tr>
-<tr><td>Companion / Shield / Herald</td><td>SLS data cable → mounts as a USB drive (internal memory, and the card too if inserted)</td><td>Plain FAT32; expected to work. A card, where present, follows the same structure rules as the internal memory.</td></tr>
-<tr><td>Envoy 2 (S / E series)</td><td>SLS data cable → mounts as a USB drive</td><td>No removable card on standard units, but the cable still exposes the internal memory as a writable drive. Not yet tested — expected to work.</td></tr>
-<tr><td>Envision</td><td>Plays <strong>encrypted files only</strong></td><td>Its storage mounts, but the firmware plays only MegaVoice-encrypted content — plainly-copied MP3s are ignored. This tool cannot prepare it; use MegaVoice's own encryptor.</td></tr>
+<tr><th>Model</th><th>Folder structure (levels)</th><th>Filename rule</th><th>Audio format</th><th>Loadable with a plain FAT copy?</th></tr>
+<tr>
+<td><strong>Envoy 2 S Series</strong> (S / S Dual / ST)</td>
+<td>4 levels: Channel > Section > Book > audio files (chapters)</td>
+<td>Channel/Section/Book folders must be bare 3-digit numbers starting at <code>001</code>, sequential. Audio files free-text but must sort into play order (zero-pad prefixes). S Dual: channel <code>002</code> must be populated (placeholder if single-language).</td>
+<td>MP3 / WAV / WMA (no bitrate mandated)</td>
+<td><strong>Yes</strong> — FAT32 (alloc 8K); write tree to onboard storage or microSD</td>
+</tr>
+<tr>
+<td><strong>Envoy 2 E Series</strong></td>
+<td>4 selectable: Channel > Section > Book > Chapter (or 3/2/1). Chapters = audio files inside Book folders only</td>
+<td>Channel/Section/Book folders carry a 3-digit consecutive prefix; descriptive suffix allowed (e.g. <code>001-Language-English</code>). Only the numeric prefix must be correct/consecutive. Audio files must sort into play order.</td>
+<td>MP3 only</td>
+<td><strong>Yes</strong> — FAT32 <em>(FAT32 is MegaVoice's line-wide standard; not printed in this model's PDF — medium-high confidence)</em></td>
+</tr>
+<tr>
+<td><strong>Companion & Shield</strong> (functionally identical)</td>
+<td>Choose one: 4-level (Channel>Section>Book>Chapter), 3-level (Section>Book>Chapter), 2-level (Book>Chapter), or 1-level (Chapters only)</td>
+<td>Channel/Section folders need a 3-digit prefix (000–999, need not be consecutive) + optional free text. Book folders and audio files may be free-text but must sort into play order (3-digit prefix strongly recommended). Names up to 63 chars. Firmware skips empty folders.</td>
+<td>Many: AAC-LC, ACELP, APE, FLAC, MP3, OGG, WAV, WMA (MP3 default). No Apple-recorded M4A/AAC; no DRM/Audible.</td>
+<td><strong>Yes</strong> — FAT32 (alloc 8K); onboard max 2 channels, microSD up to 8</td>
+</tr>
+<tr>
+<td><strong>Herald</strong></td>
+<td>Flexible: any of 3 levels — 3-level (Section>Book>Chapter), 2-level (Book>Chapter), or 1-level (flat Chapters). ≤199 Sections, ≤999 Books/Section, ≤999 files/Book; no empty folders</td>
+<td>Free text for folders and files; only rule is names must sort into play order. 3-digit numeric prefix recommended (e.g. <code>001 Book of Matthew</code>). Audio-holding folders may contain only MP3/WAV/WMA.</td>
+<td>MP3 / WAV / WMA (others ignored)</td>
+<td><strong>Yes</strong>, in practice — mounts as USB mass storage. <em>PDF does not print "FAT32"; it defers filesystem to factory default. Reformatting to FAT32 is a reasonable assumption, not a documented spec.</em></td>
+</tr>
+<tr>
+<td><strong>Envision</strong></td>
+<td>2-level: one Project folder > fixed subfolders Audio / Video / Image / Document > content files. (Video/audio/image player, not the audio-only tree.)</td>
+<td>No numeric-prefix scheme documented. Load-critical rule is <strong>encryption</strong>: external microSD/OTG files must be run through MegaVoice's Windows encryptor, which inserts <code>$ME</code> before the extension (e.g. <code>Sample video-1$ME.mp4</code>). Unencrypted files are ignored.</td>
+<td>Audio: AAC, M4A, MP3, OGG, WAV. Video: AVI, FLV, M4V, MKV, MOV, MPG, MP4.</td>
+<td><strong>No — encrypted.</strong> Supports NTFS/FAT32/exFAT, but plain files on external media are skipped; internal memory writable only via proprietary SLS-v2 cable</td>
+</tr>
+<tr>
+<td><strong>Envoy 3</strong> (Equip Plus / Equip)</td>
+<td>Standard Section > Book > Chapter numbered tree; has a microSD slot</td>
+<td>Channel/Section/Book folders renamed with 3-digit consecutive numbers (<code>001</code>, <code>002</code>…); MP3/WAV in deepest Book folders only.</td>
+<td>MP3 / WAV</td>
+<td><strong>Partial (unverified — see PDF)</strong> — onboard via SLS cable + SaberCopy; SaberCopy can prep the microSD. Exact tree medium confidence.</td>
+</tr>
+<tr>
+<td><strong>LifeLight</strong></td>
+<td>Standard Section > Book > Chapter numbered tree; newer units add a microSD reader</td>
+<td>3-digit consecutive folder numbers; MP3/WAV in deepest Book folders.</td>
+<td>MP3 / WAV</td>
+<td><strong>No (plain copy)</strong> — onboard is SLS cable + SaberCopy only; microSD specifics <em>(unverified — see PDF)</em></td>
+</tr>
+<tr>
+<td><strong>Pathway</strong></td>
+<td>Internal microSD memory + micro-USB; loaded via SaberCopy</td>
+<td>3-digit consecutive folder numbers (standard MegaVoice scheme).</td>
+<td>MP3 / WAV</td>
+<td><strong>No (plain copy) — (unverified — see PDF)</strong>; exact folder tree not text-verified</td>
+</tr>
+<tr>
+<td><strong>PocketVoice</strong></td>
+<td>Standard MegaVoice audio tree (recent SaberCopy addition)</td>
+<td>3-digit consecutive folder numbers (standard scheme).</td>
+<td>MP3 / WAV</td>
+<td><strong>No (plain copy) — (unverified — see PDF)</strong>; SLS cable + SaberCopy; tree not text-verified</td>
+</tr>
+<tr>
+<td><strong>Ambassador & Messenger</strong></td>
+<td>Legacy audio-only players; standard Section > Book > Chapter numbered tree (same SLS/SaberCopy family)</td>
+<td>3-digit consecutive folder numbers (standard scheme, by family analogy).</td>
+<td>MP3 / WAV</td>
+<td><strong>No (plain copy) — (unverified — see PDF)</strong>; no per-model manufacturer PDF located, low confidence</td>
+</tr>
 </table>
-
-<div class="callout warn"><strong>Folder &amp; filename layout differs between MegaVoice models — don't assume one structure.</strong> MegaVoice's own formatting guide says it outright: “<em>This guide is specifically for Envoy 2 E Series devices. Other MegaVoice devices may have different formatting requirements.</em>” So build your source folder to <strong>your specific model's</strong> guide. The most reliable reference is the exact layout MegaVoice's own <strong>SaberCopy</strong> produces — or an already-loaded unit of the same model. Match that, and this tool reproduces it faithfully.</div>
-
-<p>What is consistent across the models:</p>
-<ul>
-<li><strong>Filesystem:</strong> <strong>FAT32</strong> — whether it's the internal memory over the SLS cable or a microSD card. exFAT is not indicated.</li>
-<li><strong>Numbered for order:</strong> folders and files carry <strong>3-digit numeric prefixes</strong> (<code>001</code>, <code>002</code>…) so they sort into play order; free text may follow the prefix. This tool's sorted copy preserves that order.</li>
-<li><strong>Audio format:</strong> MP3 (also WAV/WMA on older players; the Companion additionally accepts AAC-LC, FLAC, OGG). Plain, non-DRM files — with the sole exception of the encrypted-only <strong>Envision</strong>. No hard bitrate cap is published; confirm with MegaVoice if you need an exact number.</li>
-</ul>
-
-<p><strong>Documented example — Envoy 2 E Series:</strong> four levels, Channel → Section → Book → Chapter (the chapters are the audio files), with the <em>Channel, Section, and Book</em> folders each renamed to 3-digit consecutive numbers (<code>001</code>, <code>002</code>…). Other models — Envoy 2 S, Companion / Shield, Herald and so on — may nest differently, so treat this as an example, not a universal rule, and check your model's guide.</p>
 
 <div class="callout warn"><strong>Watch which volume you erase.</strong> Over the SLS cable a MegaVoice player can present <em>two</em> volumes at once — its internal memory and an inserted card — so read the chooser and the “ERASE / KEEP” summary carefully. If you only want to load a card, taking it out and using a standalone USB card reader keeps things unambiguous. The <strong>Envision is the exception</strong> to all of this: it plays only encrypted files, so a plain MP3 copy is ignored — use MegaVoice's own tooling for it.</div>
 
-<p><strong>Loading / programming documentation:</strong> <a href="https://megavoice.com/sabercopy/">SaberCopy</a> (MegaVoice's own loader — the definitive reference for each model's layout), the <a href="https://megavoice.com/formatting-audio-bible/">Envoy 2 E formatting guide</a>, the <a href="https://megavoice.com/audio-cloud/how-to-guide-for-loading-audio-content-on-audio-bibles/">how-to guide for loading content</a>, and MegaVoice's <a href="https://megavoice.com/pdfs/">per-model user guides (PDFs)</a> — check the guide for <em>your</em> model.</p>
+<p><strong>Loading / programming documentation (per model):</strong></p>
+<ul>
+<li>Master loading guide — <a href="https://megavoice.com/pdf/Using%20SaberCopy%20to%20program%20MegaVoice%20players%2020200308-10.pdf">Using SaberCopy to program MegaVoice players (20200308-10)</a></li>
+<li>Envoy 2 S Series — <a href="https://megavoice.com/pdf/Envoy%202%20S%20Series%20User%20Guide%2020191217-21.pdf">Envoy 2 S Series User Guide (20191217-21)</a></li>
+<li>Envoy 2 E Series — <a href="https://megavoice.com/pdf/Envoy%202%20E%20Series%20User%20Guide%2020220914-01.pdf">Envoy 2 E Series User Guide (20220914-01)</a></li>
+<li>Companion & Shield — <a href="https://megavoice.com/pdf/Companion%20and%20Shield%20User%20Guide%2020191217-32.pdf">Companion and Shield User Guide (20191217-32)</a></li>
+<li>Herald — <a href="https://megavoice.com/pdf/Herald%20User%20Guide%2020180601-10.pdf">Herald User Guide (20180601-10)</a></li>
+<li>Envision — <a href="https://megavoice.com/pdf/megavoice-envision-english-user-guide.pdf">MegaVoice Envision User Guide</a> (encrypted-media model)</li>
+<li>Envoy 3 (Equip Plus) — <a href="https://megavoice.com/pdf/envoy-3-equip-plus-english-user-manual.pdf">Envoy 3 Equip Plus User Manual</a></li>
+<li>LifeLight — <a href="https://megavoice.com/pdf/lifelight-v2-audio-bible-user-manual-english.pdf">LifeLight V2 User Manual</a></li>
+<li>Pathway — <a href="https://megavoice.com/pdf/megavoice-pathway-english-user-guide.pdf">MegaVoice Pathway User Guide</a></li>
+<li>PocketVoice — <a href="https://megavoice.com/pdf/pocketvoice-english-user-manual.pdf">PocketVoice User Manual</a></li>
+</ul>
+<div class="callout info"><strong>Gaps & confidence:</strong> Envoy 2 S, Companion/Shield, and Herald rules are quoted verbatim from text-extractable manufacturer PDFs (high confidence). Envoy 2 E folder rules are verified, but FAT32 for it is MegaVoice's line-wide standard rather than a per-model-PDF string. Herald's PDF defers filesystem to factory default (does not print "FAT32"). Envoy 3 is medium confidence; Pathway, PocketVoice, LifeLight microSD trees are low confidence; <strong>no per-model manufacturer PDF exists for Ambassador or Messenger</strong> — those rows rest on family analogy only.</div>
 
 <h3>Renew World Outreach — The Torch</h3>
 
@@ -564,7 +641,7 @@
 <ul>
 <li><strong>Loads via:</strong> USB drive mode — it appears as a drive letter — but only over Renew's <strong>special proprietary USB cable</strong>. An ordinary or charge-only cable will not mount it, and it has no removable card, so there is no card-reader fallback.</li>
 <li><strong>Cable / hardware:</strong> Renew's proprietary Torch loading cable (easily lost — the separate USB port on the device is a charge-<em>out</em> port for phones, not a loading port).</li>
-<li><strong>Filesystem:</strong> not published — <em>unverified</em>. The Torch ships vendor-configured, so confirm the on-device filesystem with Renew before reformatting it, rather than assuming FAT32.</li>
+<li><strong>Filesystem:</strong> not published — <em>unverified</em>. The Torch ships vendor-configured, so confirm the on-device filesystem with Renew before reformatting it, rather than assuming FAT32 (<a href="#fscheck">how to check its format on a Mac</a>).</li>
 <li><strong>Folder structure:</strong> folder-per-book, shallow (the firmware navigates chapter / book / collection). Exact naming and depth rules are <em>not documented publicly</em> — confirm with Renew.</li>
 <li><strong>Audio format:</strong> MP3. Bitrate and any other-format support are <em>unverified</em>.</li>
 <li><strong>Play order:</strong> not documented — <em>unverified</em> whether it is copy order or name-sort. Test one unit and listen before trusting a batch.</li>
@@ -573,6 +650,27 @@
 <div class="callout warn"><strong>Not yet tested — proceed carefully.</strong> The Torch's internal filesystem is undocumented, and this tool reformats to a fresh FAT32 volume. Because a wrong reformat could leave a unit its own firmware can't read, confirm the on-device filesystem with Renew and test-load one real unit before running a batch. Renew's own documented path is SaberCopy on Windows over the proprietary cable.</div>
 
 <p><strong>Loading / programming documentation:</strong> <a href="https://renewoutreach.org/torch-audio-bible/">renewoutreach.org — Torch Audio Bible</a> (detailed loading tutorials are behind a login; confirm the current procedure with Renew at <code>info@renewoutreach.com</code>). For Renew's microSD-based players, see <a href="https://renewoutreach.org/equipment/microsd/">renewoutreach.org — microSD</a> — those load via the removable card in a reader (unlock the card's write-lock switch first).</p>
+
+<details class="fscheck" id="fscheck">
+<summary>🔍 How to check a device's format (filesystem) on a Mac — and what the names mean</summary>
+<p>If a player isn't confirmed as FAT32, check its current format <strong>before</strong> you load it — this tool reformats to FAT32, and you don't want to turn a player into a format it can't read. No Terminal needed:</p>
+<ol>
+<li>Plug in the device (or its memory card in a USB reader).</li>
+<li>In the <strong>Finder</strong>, click the device where it appears in the sidebar (under <em>Locations</em>).</li>
+<li>Press <kbd>Cmd</kbd>-<kbd>I</kbd> (or the menu <strong>File ▸ Get Info</strong>).</li>
+<li>Read the <strong>“Format:”</strong> line near the top of the window.</li>
+</ol>
+<p>(Or open <strong>Disk Utility</strong> — Applications ▸ Utilities ▸ Disk Utility — and click the volume; its format shows just under the name.)</p>
+<p><strong>What the Mac's names actually mean</strong> — the Mac labels don't match the Windows terms people expect:</p>
+<table>
+<tr><th>What the Mac shows</th><th>What it really is</th><th>Safe to load with this tool?</th></tr>
+<tr><td><code>MS-DOS (FAT32)</code></td><td>FAT32</td><td><strong>✅ Yes</strong> — exactly what this tool writes. It matches; go ahead.</td></tr>
+<tr><td><code>MS-DOS (FAT16)</code> or <code>MS-DOS (FAT)</code></td><td>older FAT (FAT16)</td><td><strong>⚠ Usually</strong> — this tool writes FAT32, which most players also read. But a few tiny/old players need FAT16 specifically; if yours does, don't load it until you've confirmed.</td></tr>
+<tr><td><code>ExFAT</code></td><td>exFAT</td><td><strong>⚠ Check first</strong> — exFAT is <em>not</em> the same as FAT32. This tool will reformat it to FAT32. Most players accept FAT32, but if this player <em>requires</em> exFAT it will stop reading — confirm before loading.</td></tr>
+<tr><td><code>Mac OS Extended</code> or <code>APFS</code></td><td>Apple-only formats (HFS+ / APFS)</td><td><strong>❗ Stop</strong> — a player would never ship in these, and most can't read them at all. You may be looking at the wrong disk (e.g. your Mac's own drive) — double-check before erasing anything.</td></tr>
+</table>
+<p><strong>In short:</strong> if it already says <code>MS-DOS (FAT32)</code>, you're matched — proceed. If it says <code>ExFAT</code> or an old FAT16 and you're not sure the player accepts FAT32, hold off and confirm with the maker. Either way, <strong>load one device and test it in the actual player before a whole batch.</strong></p>
+</details>
 
 <h3>Faith Comes By Hearing (FCBH) — Proclaimer, BibleStick, Micro Proclaimer</h3>
 
@@ -593,7 +691,7 @@
 
 <ul>
 <li><strong>Loads via:</strong> USB drive mode over a standard USB cable, or via the SD card in a reader.</li>
-<li><strong>Filesystem:</strong> FAT (the small 1–2 GB media may format FAT16 rather than FAT32 — check the mounted volume before relying on it).</li>
+<li><strong>Filesystem:</strong> FAT (the small 1–2 GB media may format FAT16 rather than FAT32 — check the mounted volume before relying on it; <a href="#fscheck">how to check its format</a>).</li>
 <li><strong>Audio format:</strong> MP3 and WMA.</li>
 <li><strong>Play order:</strong> order-sensitive (this is the player SaberCopy was named for); a sorted copy satisfies it.</li>
 <li><strong>Verdict:</strong> Not yet tested — expected to work. Note GRN has <strong>discontinued</strong> the Saber, so you are unlikely to be provisioning new units; existing units should load fine over USB or via the SD card.</li>
@@ -611,7 +709,7 @@
 
 <ul>
 <li><strong>Loads via:</strong> the removable microSD in a USB reader, or the USB stick itself.</li>
-<li><strong>Filesystem:</strong> FAT32 is near-universal. Some large cards ship exFAT and a minimal player may reject it — the tool reformats to FAT32, which resolves that.</li>
+<li><strong>Filesystem:</strong> FAT32 is near-universal. Some large cards ship exFAT and a minimal player may reject it — the tool reformats to FAT32, which resolves that. If a card's format is unclear, <a href="#fscheck">check it first</a>.</li>
 <li><strong>Folder structure &amp; filenames:</strong> firmware-dependent (often flat or shallow). Match your source tree to what your specific player expects; leading-zero numbering (001, 002…) is the safe cross-device convention.</li>
 <li><strong>Audio format:</strong> usually MP3; codec support varies by chipset.</li>
 <li><strong>Verdict:</strong> Not yet tested per unit — expected to work. Caveats: some players choke on deep nesting or on many files per folder, and full-size SD adapters have a write-lock switch that must be unlocked. Test one unit first.</li>

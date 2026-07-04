@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loading Audio Players — Mac Instructions</title>
+<style>
+  :root{
+    --ink:#1f2933; --muted:#66707a; --line:#e3e8ee; --bg:#ffffff;
+    --accent:#0b6b5a; --accent-soft:#e6f4f1;
+    --warn-bg:#fff6e6; --warn-line:#e0a72e;
+    --info-bg:#eef4fb; --info-line:#4a82c4;
+    --code-bg:#f4f6f8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:32px 20px 80px;}
+  h1{font-size:1.9rem; line-height:1.2; margin:.2em 0 .1em;}
+  h2{font-size:1.35rem; margin:2.2em 0 .6em; padding-top:.6em; border-top:1px solid var(--line);}
+  h3{font-size:1.08rem; margin:1.6em 0 .3em;}
+  p{margin:.5em 0;}
+  a{color:var(--accent);}
+  code{background:var(--code-bg); padding:.12em .38em; border-radius:4px; font-size:.9em;
+       font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+  pre{background:var(--code-bg); padding:14px 16px; border-radius:8px; overflow-x:auto;
+      border:1px solid var(--line);}
+  pre code{background:none; padding:0;}
+  kbd{background:#fff; border:1px solid #c4ccd4; border-bottom-width:2px; border-radius:5px;
+      padding:.05em .45em; font-size:.85em; font-family:inherit; white-space:nowrap;}
+  .lead{color:var(--muted); font-size:1.05rem;}
+  .callout{border-left:4px solid var(--line); background:#f7f9fb; padding:12px 16px;
+           border-radius:0 8px 8px 0; margin:1.1em 0;}
+  .callout.warn{border-color:var(--warn-line); background:var(--warn-bg);}
+  .callout.info{border-color:var(--info-line); background:var(--info-bg);}
+  .callout strong{color:var(--ink);}
+  ol.steps{list-style:none; counter-reset:step; padding:0; margin:0;}
+  ol.steps > li{counter-increment:step; position:relative; padding:4px 0 18px 52px; margin:0;}
+  ol.steps > li::before{
+    content:counter(step); position:absolute; left:0; top:0;
+    width:34px; height:34px; border-radius:50%; background:var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:600;
+  }
+  ol.steps > li h3{margin-top:.1em;}
+  figure{margin:14px 0 4px;}
+  img.shot{
+    display:block; width:100%; max-width:100%; height:auto;
+    border:1px solid #e3e8ee; border-radius:8px;
+    box-shadow:0 1px 4px rgba(0,0,0,.06);
+  }
+  figcaption{color:var(--muted); font-size:.82rem; margin-top:6px; text-align:center;}
+  table{border-collapse:collapse; width:100%; margin:1em 0; font-size:.95rem;}
+  th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top;}
+  th{background:var(--accent-soft);}
+  td code{white-space:nowrap;}
+  .tag{display:inline-block; font-weight:700; font-size:.8rem; padding:.1em .5em; border-radius:5px;}
+  .tag.good{background:#e4f5ea; color:#1a7a43;}
+  .tag.check{background:#fdf3d8; color:#8a6d1a;}
+  .tag.redo{background:#fbe4e4; color:#a83232;}
+  footer{margin-top:40px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--line); padding-top:14px;}
+  /* --- Tabs: Using the Loader / Player-Specific Setup (pure CSS, no JS) --- */
+  .tab-radio{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
+  .tabs{display:flex; gap:4px; flex-wrap:wrap; border-bottom:2px solid var(--line); margin:2.2em 0 0;}
+  .tab-btn{font-weight:600; color:var(--muted); padding:10px 16px; cursor:pointer; user-select:none;
+    border-radius:8px 8px 0 0; border-bottom:3px solid transparent; margin-bottom:-2px;}
+  .tab-btn:hover{color:var(--ink);}
+  #rt-using:checked ~ .tabs .tab-btn[for="rt-using"],
+  #rt-players:checked ~ .tabs .tab-btn[for="rt-players"]{
+    color:var(--accent); border-bottom-color:var(--accent); background:var(--accent-soft);}
+  #rt-using:focus-visible ~ .tabs .tab-btn[for="rt-using"],
+  #rt-players:focus-visible ~ .tabs .tab-btn[for="rt-players"]{outline:2px solid var(--accent); outline-offset:2px;}
+  .tab-panel{padding-top:.4em;}
+  .tab-panel > h2:first-child{margin-top:1em; border-top:0;}
+  #panel-using, #panel-players{display:none;}
+  #rt-using:checked ~ #panel-using{display:block;}
+  #rt-players:checked ~ #panel-players{display:block;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Loading Audio Players</h1>
+  <p class="lead">Mac instructions</p>
+
+  <p><strong>What this does:</strong> erases the USB audio players plugged into your
+  Mac and loads your audio content onto all of them at once. You choose exactly
+  which disks are erased, and you confirm before anything happens.</p>
+
+  <div class="callout warn">
+    <strong>⚠️ It erases whole DISKS.</strong> If a disk has several partitions or
+    volumes on it, <strong>all</strong> of them are wiped together. Unplug any drive
+    you do <strong>not</strong> want erased (backup drives, etc.) before you start —
+    the chooser also lets you deselect them.
+  </div>
+
+  <div class="callout info">
+    ℹ️ The devices are kept free of hidden macOS junk (<code>.DS_Store</code>, <code>._*</code>). The
+    script <strong>cleans up after itself and leaves your Mac's settings and your content folder exactly
+    as it found them.</strong>
+  </div>
+
+  <div class="callout info">
+    📥 <strong>Get the loader:</strong>
+    <a href="https://github.com/rulingAnts/mac-audio-player-loader/releases/latest/download/audio-player-loader-macOS.zip">Download
+    the latest release</a>. It's a tiny <strong>universal Mac</strong> script — it runs on both Apple
+    Silicon and Intel Macs, with nothing to install. You add your own numbered audio-content folders
+    next to it (see the <strong>Player-Specific Setup</strong> tab).
+  </div>
+
+  <input type="radio" name="tabs" id="rt-using" class="tab-radio" checked>
+  <input type="radio" name="tabs" id="rt-players" class="tab-radio">
+  <nav class="tabs" aria-label="Guide sections">
+    <label class="tab-btn" id="tab-using" for="rt-using">Using the Loader</label>
+    <label class="tab-btn" id="tab-players" for="rt-players">Player-Specific Setup</label>
+  </nav>
+
+  <section class="tab-panel" id="panel-using" role="tabpanel" aria-labelledby="tab-using">
+
+  <h2>Steps</h2>
+  <ol class="steps">
+
+    <li>
+      <h3>Put the loader in your content folder</h3>
+      <p>Unzip the download to get <code>load_content.sh</code>. Then put that file
+      <strong>inside your content folder</strong> — the one that holds your numbered audio folders
+      (<code>001&nbsp;…</code>, <code>002&nbsp;…</code>), exactly as shown below. The loader copies
+      whatever sits <strong>in its own folder</strong> onto the devices, so it has to live right
+      beside your audio.</p>
+      <p>(If someone handed you a ready-made folder, <code>load_content.sh</code> is already inside it
+      — just open that folder.)</p>
+      <figure>
+        <img class="shot" src="images/01-folder.png" alt="Screenshot: the unzipped folder with load_content.sh visible">
+        <figcaption>The unzipped folder</figcaption>
+      </figure>
+    </li>
+
+    <li>
+      <h3>Plug in the devices</h3>
+      <p>Plug in the USB hub with the devices to be loaded.</p>
+    </li>
+
+    <li>
+      <h3>Open Terminal</h3>
+      <p>Press <kbd>Cmd</kbd> + <kbd>Space</kbd>, type <code>terminal</code>, and press
+      <kbd>Return</kbd>. (Terminal is a built-in Mac app. A small window opens.)</p>
+      <figure>
+        <img class="shot" src="images/02-open-terminal.png" alt="Screenshot: Spotlight search with 'terminal' typed">
+        <figcaption>Opening Terminal with Spotlight</figcaption>
+      </figure>
+    </li>
+
+    <li>
+      <h3>Type <code>bash</code> and a space</h3>
+      <p>In the Terminal window, type the word <code>bash</code> followed by
+      <strong>one space</strong>. Do <strong>not</strong> press Return yet.</p>
+    </li>
+
+    <li>
+      <h3>Drag the script onto Terminal</h3>
+      <p>Drag the <code>load_content.sh</code> <strong>that is inside your content folder</strong> onto
+      the Terminal window and drop it — that exact copy, the one sitting beside your audio, is what
+      decides what gets loaded. Its location appears after the word <code>bash</code>.</p>
+      <figure>
+        <img class="shot" src="images/03-drag-script.png" alt="Screenshot: dragging load_content.sh onto the Terminal window">
+        <figcaption>Drag the script into Terminal</figcaption>
+      </figure>
+      <div class="callout info">
+        <strong>Can't drop it on the Terminal window?</strong> If Terminal is hidden behind other
+        windows — or you're looking at all your windows at once (like the picture below) — don't drop
+        the file into empty space. Instead: drag <code>load_content.sh</code> onto
+        <strong>Terminal's icon in the Dock</strong> (the row of app icons along the bottom of the
+        screen) — or onto its window thumbnail — and <strong>keep holding, don't let go</strong>. After
+        a second the Terminal window jumps to the front; now slide the file onto that window and release.
+      </div>
+      <figure>
+        <img class="shot" src="images/03b-drag-to-dock.png" alt="Screenshot: dragging the file onto Terminal's Dock icon and holding until the window comes forward">
+        <figcaption>Hidden window? Drag onto the Dock icon and hold, then drop on the window that appears.</figcaption>
+      </figure>
+    </li>
+
+    <li>
+      <h3>Press Return</h3>
+      <p>Click the Terminal window and press <kbd>Return</kbd>.</p>
+    </li>
+
+    <li>
+      <h3>Choose a volume label</h3>
+      <p>A box asks for the volume label — the name the devices will have. Click
+      <strong>OK</strong> for the default (<strong>PLAYER</strong>), or type your own
+      (letters and numbers, up to 11).</p>
+      <p style="color:#66707a"><small>💡 Tip: use a <strong>new, unused name each batch</strong> —
+      it makes the after-the-run device check (see <em>Verify every device</em>, below) reliable.</small></p>
+      <figure>
+        <img class="shot" src="images/04-label.png" alt="Screenshot: the volume-label dialog">
+        <figcaption>The volume-label dialog</figcaption>
+      </figure>
+    </li>
+
+    <li>
+      <h3>Confirm the device count</h3>
+      <p>A message tells you how many external disks were found, with buttons
+      <strong>Cancel / Show in Finder / Choose disks…</strong>. "Show in Finder" opens
+      the drives so you can peek at what's on them; the message then comes back. Click
+      <strong>Choose disks…</strong> to continue.</p>
+      <figure>
+        <img class="shot" src="images/05-count.png" alt="Screenshot: the 'N external disks detected' dialog">
+        <figcaption>How many devices were found</figcaption>
+      </figure>
+    </li>
+
+    <li>
+      <h3>Pick which disks to load</h3>
+      <p>A list appears. <strong>Each row is one DISK</strong>, shown with its size and
+      the names of all volumes on it. <strong>All disks start selected.</strong> If you
+      see a disk you want to <strong>keep</strong> (for example a backup drive), hold
+      <kbd>Cmd</kbd> and click that row to deselect it. Then click
+      <strong>Continue…</strong>.</p>
+      <figure>
+        <img class="shot" src="images/06-choose.png" alt="Screenshot: the disk chooser list with all disks selected">
+        <figcaption>Choose the disks (Cmd-click to deselect any to keep)</figcaption>
+      </figure>
+    </li>
+
+    <li>
+      <h3>Read and confirm</h3>
+      <p>A final message shows exactly which disks will be <strong>ERASED</strong> and
+      which will be <strong>KEPT</strong>. Read it! Then click <strong>Erase &amp; Load</strong>
+      (or <strong>Back</strong> to change the selection).</p>
+      <figure>
+        <img class="shot" src="images/07-confirm.png" alt="Screenshot: the final erase/keep confirmation dialog">
+        <figcaption>Final confirmation before erasing</figcaption>
+      </figure>
+    </li>
+
+    <li>
+      <h3>Wait</h3>
+      <p>A progress bar shows overall progress and time remaining. As each device finishes
+      you'll see a line like:</p>
+      <pre><code>  OK    disk5 loaded and ejected — safe to unplug</code></pre>
+      <p>You may unplug that device right away. The output is <strong>colour-coded</strong> —
+      green for devices that loaded, red for failures. At the end you get a
+      <strong>RESULTS</strong> summary grouped into <span class="tag good">GOOD</span>
+      <span class="tag check">CHECK</span> <span class="tag redo">REDO</span> (see below), and a
+      dialog asking <strong>Run again?</strong> — click it to do the next batch (or redo
+      failures), or <strong>Done</strong> to stop.</p>
+      <figure>
+        <img class="shot" src="images/08-progress.png" alt="Screenshot: the progress bar running in Terminal">
+        <figcaption>The progress bar mid-run</figcaption>
+      </figure>
+    </li>
+  </ol>
+
+  <div class="callout info">
+    🔔 <strong>You don't have to watch the screen.</strong> Live progress also shows in the
+    Terminal <strong>tab/window title</strong> (visible even when Terminal is in the background
+    or the Dock), and when the whole batch finishes a <strong>notification banner with a
+    sound</strong> announces the result — e.g. <em>"18 loaded, 2 need redo."</em> So you can
+    start the run and step away.
+  </div>
+
+  <div class="callout">
+    <strong>To load more devices:</strong> plug in the next batch and repeat from step 4.
+    (Press the <kbd>↑</kbd> Up-Arrow key in Terminal to repeat the previous command, then
+    <kbd>Return</kbd>.)
+  </div>
+
+  <h2>When some devices fail</h2>
+  <p>This is normal with cheap USB devices. Bad cables, loose connectors, corrosion, or
+  humidity make some devices fail — expect it. The RESULTS summary at the end sorts every
+  device:</p>
+
+  <table>
+    <tr><th>Group</th><th>Meaning</th></tr>
+    <tr>
+      <td><span class="tag good">GOOD</span></td>
+      <td>Loaded, ejected, and safe to pull. These have dropped off the Mac, so they will
+      <strong>not</strong> appear if you run again.</td>
+    </tr>
+    <tr>
+      <td><span class="tag check">CHECK</span></td>
+      <td>The content copied fine, but something needs a look (for example it could not
+      eject — just unplug it by hand).</td>
+    </tr>
+    <tr>
+      <td><span class="tag redo">REDO</span></td>
+      <td>Not loaded — retry these. They are still connected and have been renamed to
+      <strong>"REDO"</strong>, so you can spot them.</td>
+    </tr>
+  </table>
+
+  <figure>
+    <img class="shot" src="images/09-results.png" alt="Screenshot: the RESULTS summary showing GOOD and REDO groups">
+    <figcaption>The end-of-run RESULTS summary</figcaption>
+  </figure>
+
+  <p><strong>Easiest way to finish a batch:</strong> when the run ends, a dialog asks
+  <strong>Run again?</strong> <strong>Unplug the finished devices and set them aside; leave the
+  blinking failures plugged in</strong> (sorting details below). Add a fresh batch of devices too if
+  you like, then click <strong>Run again</strong>. Because the finished devices have already ejected
+  and detached, only the still-connected <strong>REDO</strong> failures — plus anything new you added
+  — show up in the list, so it redoes just the failures. Repeat until nothing is left blinking. The
+  same dialog appears after a <em>successful</em> run too — swap in the next batch and click
+  <strong>Run again</strong>, or <strong>Done</strong> to stop.</p>
+
+  <h3>Which physical device failed?</h3>
+  <p>When the run finishes with failures, the script helps you find them two ways,
+  automatically:</p>
+  <p><strong>1. It blinks the failed devices' lights — so leave those plugged in.</strong> A pop-up
+  lists the failures and <strong>blinks their lights</strong> so you can spot them in the hub. Do the
+  <em>opposite</em> of unplugging them: take out the devices that are <strong>not</strong> blinking
+  and sort them into piles by their light:</p>
+  <ul>
+    <li><strong>Steady / solid light — finished.</strong> These loaded and were ejected. Unplug them
+    and set them aside as your <strong>done</strong> pile. (Still test them later — see
+    <em>Verify every device</em>, below.)</li>
+    <li><strong>No light at all (dark) — dead battery.</strong> The device switched off or its battery
+    died mid-copy, so it failed too. Unplug it and set it aside to <strong>charge fully</strong> before
+    you reload it.</li>
+    <li><strong>Blinking — failed; leave it connected.</strong> This is a
+    <span class="tag redo">REDO</span> device and stays for the next round.</li>
+  </ul>
+  <p>Your hub now holds only the still-connected <strong>blinking</strong> devices. Plug in a fresh
+  batch of new devices now too if you want, then click <strong>Run again</strong> — it redoes the
+  blinking failures (and loads any new ones). Repeat until nothing blinks. Choose <strong>Done</strong>
+  when you're finished.</p>
+  <div class="callout warn">
+    ⚠️ <strong>Also watch for dark devices.</strong> A device whose battery died or that
+    switched off mid-copy shows <strong>no light at all</strong> — not blinking. It failed too
+    and must be redone. A <strong>steady/solid light</strong> means the device finished — but
+    still check its content before distributing.
+    <br><br>
+    <strong>Charge a dark device before reloading it.</strong> The loading cable and hub may carry
+    data only and <strong>not deliver a charge</strong>, so simply plugging a dead device back in
+    may not wake it. Charge it <strong>fully first</strong> — in the sun, or with a proper charging
+    cable — then reconnect it to reload.
+  </div>
+  <div class="callout">
+    🔧 <strong>For a device that keeps failing:</strong> before giving up on it, <strong>re-seat its
+    cable</strong> — unplug and firmly reconnect both ends, in case a connector is loose or not fully
+    seated. For stubborn cases, a little <strong>electrical contact cleaner</strong> on the connector
+    can help, and so can a <strong>full charge</strong> — a low battery alone can make a copy fail.
+  </div>
+
+  <p><strong>2. It marks them in Finder — and macOS helps you avoid pulling the wrong one.</strong>
+  The failed devices stay <strong>mounted</strong> and are renamed <code>REDO</code>. Open a Finder
+  window and watch the list under your Mac's name (e.g. <em>"Seth's MacBook Pro"</em>) as you unplug —
+  the <strong>only</strong> USB volumes still shown there are the failed <code>REDO</code> ones.</p>
+  <ul>
+    <li>The <strong>finished</strong> devices were already <strong>ejected</strong>, so pulling one is
+    silent — nothing complains.</li>
+    <li>If you pull a device and macOS warns <strong>“Disk not ejected properly”</strong> (unsafe
+    removal), you just took out a still-mounted <code>REDO</code> device — one you meant to leave
+    connected. No harm done, but the warning tells you it belongs in the failures pile: put it back,
+    or set it aside to redo.</li>
+    <li>To pin down which physical device is which, unplug them one at a time and watch for a
+    <code>REDO</code> to disappear from the Finder list.</li>
+  </ul>
+  <figure>
+    <img class="shot" src="images/10-finder-redo.png" alt="Screenshot: Finder sidebar showing only REDO volumes under the Mac's name">
+    <figcaption>Only the failed (REDO) volumes remain in Finder</figcaption>
+  </figure>
+
+  <h2>Verify every device before handing it out</h2>
+  <p>This tool <strong>cannot catch every failure.</strong> A device that fully
+  <strong>disconnected or lost power</strong> partway through can still be reported as
+  loaded, and a blank or half-written device is not always obvious. So test the devices —
+  <strong>even when the run reports no failures:</strong></p>
+  <ol>
+    <li>Pull the failed (<strong>REDO</strong>) devices first (see above), so they're out
+    of the way.</li>
+    <li>Unplug and re-plug the rest — or just re-plug the whole hub — and confirm each one
+    comes back mounted with the label you chose (e.g. <strong>PLAYER</strong>).</li>
+    <li>One device at a time is the most reliable check.</li>
+  </ol>
+  <div class="callout info">
+    💡 <strong>Use a new, unused label for each batch.</strong> Then a device that quietly
+    kept its <em>old</em> content — and never really got written this run — is obvious: it
+    comes back with the wrong name, or doesn't mount at all.
+  </div>
+
+  <h2>Troubleshooting</h2>
+  <table>
+    <tr><th>Message</th><th>What it means / what to do</th></tr>
+    <tr><td><code>Skipping diskN — WRITE-PROTECTED</code></td>
+        <td>That device (or card) has a hardware write-protect lock. Unlock it and run again.</td></tr>
+    <tr><td><code>SKIPPED diskN — device changed</code></td>
+        <td>A drive was plugged/unplugged after the list was shown. Nothing was erased on it.
+        Run again for a fresh list.</td></tr>
+    <tr><td><code>REDO diskN: stalled …</code></td>
+        <td>That device stopped accepting data and was given up on. Try it again alone; if it
+        stalls again, throw it away.</td></tr>
+    <tr><td><code>REDO diskN: copy failed …</code></td>
+        <td>The device may be faulty. Try a different hub port, or discard it.</td></tr>
+    <tr><td>A device is dark (no light)</td>
+        <td>Its battery died or it switched off mid-copy, so it failed — but it can't blink.
+        <strong>Charge it fully first</strong> (in the sun or with a proper charging cable — the data
+        cable/hub may not charge it), then reconnect and redo it. (A steady/solid light means it
+        finished; still verify its content.)</td></tr>
+    <tr><td>Stopped with <kbd>Ctrl</kbd>+<kbd>C</kbd>?</td>
+        <td>The script lists which devices are INCOMPLETE. Do not hand those out — run again
+        to redo them.</td></tr>
+    <tr><td>No disks listed</td>
+        <td>Make sure the hub is connected and powered, and the devices are fully inserted.</td></tr>
+    <tr><td>A red-icon alert pops up</td>
+        <td>The script raises an on-screen alert for the show-stoppers — no external devices
+        found, or none could be prepared. It tells you what to check; fix it and run again.</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <strong>Advanced (not generally recommended): loading from a device instead of a folder on your Mac.</strong>
+    You can run the loader straight from a “master” device — a player, a thumb drive, etc. — by putting
+    <code>load_content.sh</code> and your content folders on it and dragging <em>that</em> copy onto Terminal.
+    If you do:
+    <ul>
+      <li><strong>Plug the master into its own port on the Mac</strong> — a spare USB / USB-C port on the
+        computer itself, <strong>not</strong> a spare socket on the same hub or adapter as the devices you're
+        loading. That keeps it out of the shared-hub traffic (so the copy stays fast) and keeps its identity
+        stable while devices are plugged and unplugged on the hub.</li>
+      <li><strong>The loader protects the master automatically.</strong> It works out which physical disk the
+        script is running from and removes that disk from everything it can erase — you'll see
+        <code>Skipping diskN — it holds the source content</code> — and it only ever <em>reads</em> from the
+        master, never formatting, writing to, or renaming it.</li>
+      <li><strong>Still play it safe:</strong> the master is protected from erasure but is not hardware
+        write-locked, so use a spare copy as the master rather than your only good device, and always check
+        a freshly loaded device in the real player before doing a big batch.</li>
+    </ul>
+  </div>
+
+  </section><!-- end panel: Using the Loader -->
+
+  <section class="tab-panel" id="panel-players" role="tabpanel" aria-labelledby="tab-players">
+  <h2>Player-Specific Setup</h2>
+  <p>This loader tool is <strong>player-agnostic</strong>: all it does is make a clean, full-size
+FAT32 volume and copy your numbered folders onto it in play order. It does not know or care which
+brand of player you own. This tab is about matching <em>your source folder and your hardware</em> to
+<em>your specific player</em> so that what the tool copies is what the player will actually read.</p>
+
+<h2>Will my player work?</h2>
+
+<p>A player is loadable with this tool only if all four of these are true:</p>
+
+<ol>
+  <li><strong>It shows up as a writable USB disk (or its card does).</strong> Either the player itself
+  mounts on the Mac as an erasable removable drive, or it takes a removable microSD/SD card that you
+  can pull and mount in a USB card reader.</li>
+  <li><strong>It reads a FAT32 volume.</strong> This tool formats FAT32; a player that demands exFAT
+  or some other layout will not read what you produce.</li>
+  <li><strong>It plays plain, unencrypted audio files</strong> (normally MP3) that you organize into
+  folders. Players that require a proprietary or encrypted container will ignore ordinary MP3s.</li>
+  <li><strong>It plays in folder/track order</strong> (either the copy order this tool writes, or a
+  name-sort your numbered folders satisfy).</li>
+</ol>
+
+<div class="callout info">
+  <strong>Sealed player, removable card?</strong> Many players have factory-sealed internal memory
+  you cannot touch <em>and</em> a removable microSD card. In that case you load the <em>card</em>, not
+  the player: pull the card, put it in a USB card reader, and run the tool against the card. A
+  standalone reader is best — then only the one clean card volume mounts and you cannot erase the
+  wrong thing.
+</div>
+
+<div class="callout warn">
+  <strong>Always test one device first.</strong> Load a single card or player, put it in the actual
+  player, and confirm it plays in the right order before you run a batch. Several details below are
+  marked unverified precisely because they can only be settled by testing one real unit.
+</div>
+
+<h2>Player families</h2>
+
+<h3>Hope Tech Global — KULUMI (X, Mini, Sheep)</h3>
+
+<p>Low-cost solar audio players sold in bulk to Bible-translation ministries. This tool's whole
+workflow is modeled on Hope Tech Global's own <code>HTGv4.CMD</code> Windows loader, which loads a
+plain FAT32 volume in copy order.</p>
+
+<table>
+  <tr><th>Item</th><th>Detail</th></tr>
+  <tr><td>Loads via</td><td>KULUMI Mini (open-slot variant): <strong>removable microSD in a USB card
+  reader</strong> — the clean, recommended path. KULUMI X and Sheep: USB drive mode over Hope Tech
+  Global's cable (no removable card).</td></tr>
+  <tr><td>Cable / hardware</td><td>A <strong>proprietary green or red DATA cable</strong> from Hope
+  Tech Global — <em>not</em> the black charge cable, and not a generic USB cable. A charge-only cable
+  will charge the device but will not mount it. For the Mini, a standard USB microSD card reader
+  instead.</td></tr>
+  <tr><td>Filesystem</td><td>FAT32 (the KULUMI program page: "use the default format: FAT32").</td></tr>
+  <tr><td>Folder structure</td><td>KULUMI X and Mini: <strong>3 levels</strong> — content category
+  &rarr; title/album &rarr; MP3 files. KULUMI Sheep: <strong>2 levels</strong> — title/album &rarr;
+  MP3 files. Build your source tree to match the specific model.</td></tr>
+  <tr><td>Filename convention</td><td>Number folders and files with leading zeros (<code>001</code>,
+  <code>002</code>, …) so they land in the right order. This is required by the copy-order playback
+  behavior, not by a documented filename rule. Plain ASCII names.</td></tr>
+  <tr><td>Audio format</td><td>MP3. No published bitrate ceiling — treat any hard bitrate limit as
+  unverified; confirm with the manufacturer.</td></tr>
+  <tr><td>Works with this tool</td><td><strong>KULUMI Mini (open-slot, via the card):</strong> yes —
+  this is the confirmed-workable path. <strong>KULUMI X:</strong> likely, but test first. <strong>KULUMI
+  Sheep:</strong> unknown on Mac — needs its cable AND a confirmed Mac mount.</td></tr>
+</table>
+
+<div class="callout warn">
+  <strong>The key uncertainty (KULUMI X and Sheep):</strong> Hope Tech Global documents loading only
+  on Windows (Kulumi Scripts) or on a Mac via Wine/CrossOver (SaberCopy). No manufacturer source
+  confirms that the X or Sheep mount as a writable USB disk under native macOS over the proprietary
+  cable. They use FAT32 internal memory, so it is plausible — but <em>reported, not confirmed</em>.
+  Test one unit end-to-end on your Mac before committing to a batch. Neither the X nor the Sheep has a
+  removable card, so there is no card-reader fallback if the mount does not work.
+</div>
+
+<ul>
+  <li><strong>KULUMI Mini variants:</strong> the open-slot version (card swappable) is the easy win;
+  the enclosed-slot version behaves like the X (proprietary-cable path only). Confirm which you have
+  before buying cables.</li>
+  <li><strong>Locked / write-protected cards:</strong> KULUMI cards can be hardware-locked with
+  anti-tamper tooling. A locked card is read-only; this tool detects the write-protect and skips it.
+  Use an unlocked card.</li>
+  <li><strong>KULUMI X storage is disputed:</strong> the manufacturer calls it "internal 8GB memory,"
+  an independent SIL review calls it an "enclosed 8GB microSD." Either way it is not user-removable, so
+  the loading path is the same.</li>
+</ul>
+
+<p><strong>Loading / programming documentation:</strong>
+<a href="https://kulumi.org/program/">kulumi.org/program</a> (official loading guide),
+<a href="https://kulumi.org/kulumi-x/">KULUMI X</a>,
+<a href="https://kulumi.org/kulumi-mini/">KULUMI Mini</a>,
+<a href="https://kulumi.org/kulumi-sheep/">KULUMI Sheep</a>.</p>
+
+<h3>MegaVoice</h3>
+
+<p>Solar/rechargeable audio Bible players. The critical fact: MegaVoice players' <strong>internal
+memory is not a plain USB drive</strong> — it is reachable only through MegaVoice's proprietary SLS
+cable plus their SaberCopy software. This tool cannot load internal memory. Where a MegaVoice player
+has a <em>removable microSD card</em>, that card is a plain FAT32 volume and the tool loads it fine.</p>
+
+<table>
+  <tr><th>Item</th><th>Detail</th></tr>
+  <tr><td>Loads via</td><td><strong>Removable microSD in a USB card reader</strong> on models that
+  have a card slot (Companion, Shield, Herald). The internal flash of every model (including Envoy 2 S
+  / E) loads only via SLS + SaberCopy and is <em>out of scope</em> for this tool.</td></tr>
+  <tr><td>Cable / hardware</td><td>For the card path: a standard USB microSD card reader (recommended)
+  or a data cable to the player's own reader. For internal memory: the proprietary MegaVoice SLS cable
+  (available only from MegaVoice) — this tool does not use that path.</td></tr>
+  <tr><td>Filesystem</td><td>microSD must be FAT32 ("cards should be formatted as FAT32 for use in any
+  MegaVoice player that has a microSD card reader").</td></tr>
+  <tr><td>Folder structure</td><td>Four levels: Channel &rarr; Section &rarr; Book &rarr; Chapter
+  (audio files). Channel and Section folders need a <strong>3-digit numeric prefix</strong>
+  (<code>001</code>, <code>002</code>, …); free-form text may follow (e.g. <code>001-English</code>).
+  No empty primary folders.</td></tr>
+  <tr><td>Filename convention</td><td>3-digit prefixes on folders; audio files must sort in intended
+  play order. A 3-digit prefix on files too guarantees correct order.</td></tr>
+  <tr><td>Audio format</td><td>Broad on card-based models (AAC-LC, FLAC, MP3, OGG, WAV, WMA and
+  others); <strong>DRM-protected files are not supported</strong>. No hard bitrate limit published —
+  unverified.</td></tr>
+  <tr><td>Works with this tool</td><td><strong>Companion, Shield, Herald — via the microSD card:</strong>
+  yes. <strong>Envoy 2 S / E internal memory:</strong> no (SLS + SaberCopy only).
+  <strong>Envision:</strong> no — see below. <strong>Factory-sealed/pre-loaded units:</strong> no
+  (unless a specific unit has a user-accessible microSD, in which case treat it like Companion).</td></tr>
+</table>
+
+<div class="callout warn">
+  <strong>Envision is a trap.</strong> The Envision's removable microSD mounts fine, but it accepts
+  <strong>encrypted files only</strong> — plainly-copied MP3s are skipped and ignored by the player.
+  The encryptor is a MegaVoice Windows-only program. A plain copy from this tool will not play. Do not
+  treat "has a removable card" as "compatible" for the Envision.
+</div>
+
+<ul>
+  <li><strong>Herald caveats (medium confidence):</strong> its exact per-level folder maxima and full
+  codec list were not re-verified line by line — confirm in the Herald guide. The FAT32-card loading
+  path is the same as the Companion.</li>
+  <li><strong>Don't erase the wrong volume:</strong> when a Companion or Herald is plugged in, both its
+  onboard memory and its card reader can appear as volumes. Use a standalone card reader so only the
+  card mounts, and identify it carefully before erasing.</li>
+  <li><strong>SaberCopy fallback is Windows-oriented:</strong> if you ever need internal memory, note
+  SaberCopy on Mac needs "additional setup" and has historically been Intel-only — a problem on Apple
+  Silicon. This tool's card path avoids that entirely.</li>
+</ul>
+
+<p><strong>Loading / programming documentation:</strong>
+<a href="https://megavoice.com/pdf/Companion%20and%20Shield%20User%20Guide%2020191217-32.pdf">Companion & Shield User Guide (PDF)</a>,
+<a href="https://megavoice.com/formatting-audio-bible/">Formatting an audio Bible</a>,
+<a href="https://megavoice.com/audio-cloud/how-to-guide-for-loading-audio-content-on-audio-bibles/">How-to guide for loading content</a>.</p>
+
+<h3>Renew World Outreach — The Torch and microSD players</h3>
+
+<p>Solar audio Bible players (The Torch, Papyrus). "The Torch" is a Renew product — do not confuse it
+with the Davar/Kivah Audibible. The Torch's internal memory is <em>not</em> a good match for this
+tool; some Renew players take a removable microSD, which is.</p>
+
+<table>
+  <tr><th>Item</th><th>Detail</th></tr>
+  <tr><td>Loads via</td><td><strong>The Torch:</strong> 8&nbsp;GB internal flash only, <em>no card
+  slot</em> — loaded over a special proprietary USB cable with SaberCopy. <strong>Renew microSD
+  players (e.g. Papyrus):</strong> the removable microSD in a USB card reader.</td></tr>
+  <tr><td>Cable / hardware</td><td>The Torch needs Renew's special proprietary USB cable (easily lost;
+  the USB <em>output</em> port is charge-only, not a loading port). The microSD path needs a standard
+  USB card reader.</td></tr>
+  <tr><td>Filesystem</td><td>The Torch's on-device filesystem is <strong>not documented</strong> —
+  unverified; do not assume FAT32. The microSD path is FAT32 by default (also stated as unverified vs.
+  exFAT — FAT32 is the safe default).</td></tr>
+  <tr><td>Folder structure</td><td>Folder-per-book / numbered folders. Renew guidance for the microSD
+  path: Channel, Section and Book folders each renamed with 3-digit consecutive numbers (<code>001</code>,
+  <code>002</code>, …). Exact depth/limits for the Torch's internal memory are unverified.</td></tr>
+  <tr><td>Filename convention</td><td>3-digit consecutive numbering on folders and files. Leading-zero
+  numbering for the Torch internal memory is prudent but not confirmed.</td></tr>
+  <tr><td>Audio format</td><td>MP3. Bitrate and any other-format support are unverified — confirm with
+  Renew.</td></tr>
+  <tr><td>Works with this tool</td><td><strong>The Torch:</strong> no — no removable card, and its
+  vendor-configured internal filesystem should not be blindly reformatted by a generic disk tool.
+  <strong>Renew microSD players — via the card:</strong> workable (medium confidence), when the card is
+  unlocked.</td></tr>
+</table>
+
+<div class="callout warn">
+  <strong>Do not reformat the Torch with this tool.</strong> The Torch does expose a drive letter over
+  its proprietary cable, but this tool wipes and re-creates a fresh FAT32 volume — and the Torch's
+  internal partition/filesystem is undocumented and vendor-configured. Reformatting it could leave a
+  unit its own firmware can't read. Load the Torch with SaberCopy on Windows over its proprietary
+  cable; only consider this tool after Renew confirms the on-device filesystem and you have
+  test-loaded and played one real unit.
+</div>
+
+<ul>
+  <li><strong>Card write-lock gotcha:</strong> on the microSD path, if the card's hardware lock switch
+  is set, content cannot be deleted or added. Slide it to unlocked first (the tool skips hardware-locked
+  cards).</li>
+  <li><strong>SaberCopy is Windows-only</strong> (Windows 8.x/10; Mac needs a VM or Wine), so on a
+  Mac-only workflow neither the intended loader nor a verified reformat path is available for the
+  Torch's internal memory.</li>
+</ul>
+
+<p><strong>Loading / programming documentation:</strong>
+<a href="https://renewoutreach.org/torch-audio-bible/">The Torch (manufacturer page)</a>,
+<a href="https://renewoutreach.org/equipment/microsd/">Renew microSD equipment</a>. Detailed loading
+tutorials sit behind a login — confirm the current procedure and on-device filesystem with Renew World
+Outreach before relying on this tool for any Renew device.</p>
+
+<h3>Global Recordings Network — Saber</h3>
+
+<p>The hand-wind MP3 player this tool's copy method is indirectly named for (via "SaberCopy").</p>
+
+<table>
+  <tr><th>Item</th><th>Detail</th></tr>
+  <tr><td>Loads via</td><td>Its built-in USB port (GRN: loading is "as simply as connecting a USB
+  cable to your computer and copying across MP3 files") or its SD card in a reader.</td></tr>
+  <tr><td>Cable / hardware</td><td>A standard USB cable and/or an SD card reader. No proprietary cable
+  indicated for the Saber.</td></tr>
+  <tr><td>Filesystem</td><td>FAT (FAT16/FAT32 for its small 1&nbsp;GB internal / 2&nbsp;GB card
+  media). Exact filesystem not published — verify the mounted volume; small media may format FAT16
+  rather than FAT32.</td></tr>
+  <tr><td>Folder structure</td><td>Numbered folder hierarchy (SaberCopy-style). Exact required
+  top-folder names are not documented — treat as unverified.</td></tr>
+  <tr><td>Filename convention</td><td>Ordered folders; specific numbering rules unverified for the
+  Saber specifically. Use leading-zero numbering to be safe.</td></tr>
+  <tr><td>Audio format</td><td>MP3 and WMA.</td></tr>
+  <tr><td>Works with this tool</td><td>Likely, for existing units — the USB or SD path mounts as mass
+  storage. But GRN has <strong>discontinued</strong> the Saber, so you are unlikely to be provisioning
+  new ones.</td></tr>
+</table>
+
+<p><strong>Loading / programming documentation:</strong>
+<a href="https://globalrecordings.net/en/saber-how-to-use">Saber — how to use</a>,
+<a href="https://globalrecordings.net/en/saber">Saber overview</a>.</p>
+
+<h3>Faith Comes By Hearing — Proclaimers, BibleStick, Micro Proclaimer</h3>
+
+<p>FCBH's own playback devices are a <strong>closed, factory-loaded ecosystem</strong>. None of them
+can be loaded with this tool.</p>
+
+<table>
+  <tr><th>Item</th><th>Detail</th></tr>
+  <tr><td>Loads via</td><td>Nothing user-writable. FCBH installs the content before shipping. The SIL
+  review states plainly: "you cannot change the content on the Proclaimer. It will only read memory
+  cards that have been pre-loaded with audio Scriptures by FCBH."</td></tr>
+  <tr><td>Cable / hardware</td><td>USB-C (or micro-USB on older units) for <strong>charging
+  only</strong> — not a data/loading port. No user programming cable exists. The BibleStick runs on a
+  single AAA battery with no documented data port at all.</td></tr>
+  <tr><td>Filesystem / structure / filenames</td><td>FCBH-controlled and not published — not
+  applicable to end users, because there is no user-writable volume.</td></tr>
+  <tr><td>Audio format</td><td>MP3 (FCBH's recordings), but factory-prepared; on-device bitrate is
+  unverified and moot for loading.</td></tr>
+  <tr><td>Works with this tool</td><td><strong>No</strong> — for every FCBH device (Proclaimer
+  S100/S50/S25/E10, BibleStick, Micro Proclaimer). They never present writable USB mass storage. Order
+  them pre-loaded in the language you need from FCBH.</td></tr>
+</table>
+
+<div class="callout info">
+  <strong>One narrow exception, and it is not an FCBH player.</strong> If you have <em>blank</em>
+  consumer microSD cards destined for a generic phone or a plain-FAT32 third-party player, this tool
+  formats and loads those cards correctly. But a Proclaimer will only play FCBH-authored cards, and a
+  pre-loaded FCBH card should never be wiped. This tool feeds generic players, not FCBH's own.
+</div>
+
+<p><strong>Loading / programming documentation:</strong> No official user loading guide exists — FCBH
+devices are not user-loadable. Order pre-loaded content via
+<a href="https://www.faithcomesbyhearing.com/audio-bible-resources/partner-resources">FCBH partner resources</a>.</p>
+
+<h3>Kivah / Davar — Audibible K1</h3>
+
+<p>A player with a removable microSD card that is nonetheless <strong>not</strong> loadable with this
+tool.</p>
+
+<table>
+  <tr><th>Item</th><th>Detail</th></tr>
+  <tr><td>Loads via</td><td>Its removable microSD mounts in a card reader as mass storage — but the
+  audio must be in an <strong>encrypted, password-generated proprietary container</strong> produced by
+  Kivah's own software.</td></tr>
+  <tr><td>Cable / hardware</td><td>A standard USB microSD reader reaches the card, but you also need
+  Kivah's proprietary encryption software.</td></tr>
+  <tr><td>Filesystem / structure / filenames</td><td>Determined by Kivah's software, not by you.</td></tr>
+  <tr><td>Audio format</td><td>Encrypted proprietary format — <strong>not plain MP3</strong>.</td></tr>
+  <tr><td>Works with this tool</td><td><strong>No.</strong> A removable card alone does not make a
+  player compatible: plain MP3s copied by this tool will not play. Use Kivah/Davar's own tooling.</td></tr>
+</table>
+
+<p><strong>Loading / programming documentation:</strong>
+<a href="https://www.kivah.co.za">kivah.co.za</a> — obtain and use Kivah's own encryption software for
+the Audibible.</p>
+
+<h3>Generic FAT MP3 players (cards, sticks, cheap radios/speakers)</h3>
+
+<p>Any locally-bought MP3 player, speaker, or radio that reads a microSD card or a USB stick you insert.
+This is the tool's <strong>sweet spot</strong>.</p>
+
+<table>
+  <tr><th>Item</th><th>Detail</th></tr>
+  <tr><td>Loads via</td><td>The removable microSD/SD card in a USB reader, or the USB stick itself —
+  a standard writable mass-storage volume.</td></tr>
+  <tr><td>Cable / hardware</td><td>A standard USB card reader, or the stick itself. No proprietary
+  cable.</td></tr>
+  <tr><td>Filesystem</td><td>FAT32 is near-universal on these and is what the tool writes. Large cards
+  sometimes ship exFAT and a minimal player may reject it — this tool reformats to FAT32.</td></tr>
+  <tr><td>Folder structure</td><td>Firmware-dependent, often flat or shallow. Match your source tree
+  to your specific player; the tool imposes no layout.</td></tr>
+  <tr><td>Filename convention</td><td>Leading-zero numbering (<code>001</code>, <code>002</code>, …)
+  is the safe cross-device convention. Many cheap players sort by copy order (which this tool controls);
+  some sort by name — leading zeros satisfy both.</td></tr>
+  <tr><td>Audio format</td><td>MP3 (sometimes WAV). Codec/bitrate support varies by chipset —
+  unverified per unit.</td></tr>
+  <tr><td>Works with this tool</td><td>Likely — any card or stick that mounts as writable FAT32 works.
+  Confirm your specific player reads FAT32, watch for players that choke on nested folders or too many
+  files per folder, and unlock any full-size SD adapter's write-lock switch.</td></tr>
+</table>
+
+<p><strong>Loading / programming documentation:</strong> No single manufacturer applies. For a broad
+comparison of mission audio players and how each loads, see the SIL / Scripture Engagement review
+<a href="https://scripture-engagement.org/wp-content/uploads/2019/11/Margetts-R-2024-Which-Audio-Player-2024-05-25.pdf">"Which Audio Player?" (Margetts, 2024, PDF)</a>.</p>
+
+<h2>General guidance for any player</h2>
+
+<p>Whatever the player, structure your source folder like this before running the tool:</p>
+
+<ol>
+  <li><strong>Number your top-level folders:</strong> <code>001-…</code>, <code>002-…</code>,
+  <code>003-…</code>, one per unit of content, in the order you want them played.</li>
+  <li><strong>Number your tracks with leading zeros</strong> inside each folder:
+  <code>01</code>, <code>02</code>, … <code>10</code>, <code>11</code> — so that <code>10</code> does
+  not sort before <code>2</code>.</li>
+  <li><strong>Use one audio format the device supports</strong> — usually MP3. Don't mix in formats a
+  cheap player might not decode.</li>
+  <li><strong>Keep the nesting shallow.</strong> Match the depth your specific player expects (2 levels
+  for the KULUMI Sheep, 3 for the KULUMI X/Mini, 4 for card-based MegaVoice); deeper or more elaborate
+  trees confuse minimal firmware.</li>
+  <li><strong>Test one loaded device in the actual player before you run a batch.</strong> Confirm it
+  powers on, finds the content, and plays in the order you intended. Only then load the rest.</li>
+</ol>
+
+<div class="callout info">
+  <strong>Why the numbering matters:</strong> many of these players play in the order files were
+  <em>copied</em>, not a firmware name-sort. This tool copies your folders in sorted name order onto a
+  fresh volume, so numbered names with leading zeros are what put the tracks in the right sequence.
+</div>
+  </section>
+
+  <footer>
+    Audio Player Loader — Mac instructions.
+    <strong>Engineers / power users:</strong> see <a href="TECHNICAL.html">TECHNICAL.html</a> for
+    the full technical specification, safety guards, and licensing.<br>
+    Licensed under <a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL-3.0</a> · © 2026 Seth
+    Johnston · full terms in <code>LICENSE.txt</code>.
+  </footer>
+
+</div>
+</body>
+</html>

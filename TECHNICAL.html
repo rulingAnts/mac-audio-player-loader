@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio Player Loader — Technical Specifications</title>
+<style>
+  :root{
+    --ink:#1d2530; --muted:#5c6773; --line:#e2e7ee; --bg:#ffffff;
+    --accent:#0b5f6e; --accent-soft:#e7f2f4;
+    --warn-bg:#fff4e5; --warn-line:#d98a1f;
+    --danger-bg:#fdecec; --danger-line:#c0392b;
+    --ok-bg:#e7f6ec; --ok-line:#1f9d55;
+    --code-bg:#f4f6f8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:820px; margin:0 auto; padding:34px 22px 90px;}
+  h1{font-size:1.85rem; line-height:1.15; margin:0 0 .15em;}
+  h2{font-size:1.3rem; margin:2.4em 0 .5em; padding-top:.55em; border-top:2px solid var(--line);}
+  h3{font-size:1.06rem; margin:1.5em 0 .3em;}
+  p,li{margin:.45em 0;}
+  a{color:var(--accent);}
+  code{background:var(--code-bg); padding:.1em .36em; border-radius:4px; font-size:.88em;
+       font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+  pre{background:var(--code-bg); padding:13px 15px; border-radius:8px; overflow-x:auto; border:1px solid var(--line); font-size:.86rem;}
+  pre code{background:none; padding:0;}
+  .sub{color:var(--muted); font-size:1.05rem; margin:.1em 0 0;}
+  .meta{color:var(--muted); font-size:.85rem; margin-top:.6em;}
+  table{border-collapse:collapse; width:100%; margin:1.1em 0; font-size:.93rem; display:block; overflow-x:auto;}
+  th,td{border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top;}
+  th{background:var(--accent-soft); white-space:nowrap;}
+  td code{white-space:nowrap;}
+  .callout{border-left:4px solid var(--line); background:#f7f9fb; padding:11px 15px; border-radius:0 8px 8px 0; margin:1.1em 0;}
+  .callout.danger{border-color:var(--danger-line); background:var(--danger-bg);}
+  .callout.warn{border-color:var(--warn-line); background:var(--warn-bg);}
+  .callout.ok{border-color:var(--ok-line); background:var(--ok-bg);}
+  .toc{background:#fafbfc; border:1px solid var(--line); border-radius:10px; padding:14px 20px; margin:1.4em 0;}
+  .toc ol{margin:.3em 0; padding-left:1.3em; columns:2; font-size:.92rem;}
+  .lede{font-size:1.05rem;}
+  ol.flow{padding-left:1.3em;}
+  ol.flow>li{margin:.5em 0;}
+  .tag{display:inline-block;font-weight:700;font-size:.78rem;padding:.05em .45em;border-radius:5px;}
+  .tag.ok{background:#e4f5ea;color:#1a7a43;} .tag.check{background:#fdf3d8;color:#8a6d1a;} .tag.redo{background:#fbe4e4;color:#a83232;}
+  footer{margin-top:44px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:16px;}
+  .lic{background:#f4f8f9;border:1px solid var(--accent-soft);border-radius:10px;padding:16px 20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Audio Player Loader — Technical Specifications</h1>
+  <p class="sub">A macOS shell tool that bulk-erases external USB disks and copies audio content onto them in parallel.</p>
+  <p class="meta">Script: <code>load_content.sh</code> · Platform: macOS (universal — Apple Silicon &amp; Intel) · Licensed under AGPL-3.0 · © 2026 Seth Johnston</p>
+
+  <div class="callout danger">
+    <strong>This tool destroys data.</strong> It reformats whole external USB disks. It is designed
+    to erase every selected device completely. Read §3 and §5 before running or re-publishing it.
+  </div>
+
+  <p class="lede">This document is for engineers and power users deciding whether the script is safe
+  to run, audit, or re-publish. It describes exactly what the script does, how it works, the safety
+  guards and the reasoning behind them, what it deliberately does <em>not</em> do, and the licensing.</p>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#purpose">Purpose &amp; audience</a></li>
+      <li><a href="#env">Environment &amp; dependencies</a></li>
+      <li><a href="#destruction">What it destroys</a></li>
+      <li><a href="#flow">Operational flow</a></li>
+      <li><a href="#guards">Safety guards &amp; rationale</a></li>
+      <li><a href="#concurrency">Concurrency &amp; performance</a></li>
+      <li><a href="#junk">macOS junk handling</a></li>
+      <li><a href="#failure">Failure model &amp; verification</a></li>
+      <li><a href="#privacy">Network &amp; privacy</a></li>
+      <li><a href="#limits">Known limitations</a></li>
+      <li><a href="#audit">Auditing notes</a></li>
+      <li><a href="#license">License &amp; reuse rights</a></li>
+    </ol>
+  </div>
+
+  <h2 id="purpose">1. Purpose &amp; audience</h2>
+  <p>The tool provisions many identical USB audio-player devices (e.g. MegaVoice or any
+  player that reads a FAT filesystem) in one operation: it erases each selected external disk, writes
+  a fresh full-size FAT32 partition, and copies a folder of audio content onto every device in
+  parallel. It is operated by non-technical field users through native macOS dialogs; the terminal
+  output is the authoritative record.</p>
+  <p>The script lives <em>inside</em> the content folder and copies that folder's contents (minus its
+  own helper files) to each device — the same convention as Hope Tech Global's <code>HTGv4.CMD</code>
+  on Windows.</p>
+
+  <h2 id="env">2. Environment &amp; dependencies</h2>
+  <ul>
+    <li><strong>OS:</strong> macOS (developed/tested on macOS 26 “Tahoe”). Uses only Apple-supplied tools.</li>
+    <li><strong>Architecture: universal.</strong> The tool is a shell script, not a compiled binary, so
+      there is no architecture-specific build — it runs natively on both Apple Silicon (M-series) and
+      Intel Macs. Distribution is source-only; there are no binary artifacts to sign, notarize, or match to a CPU.</li>
+    <li><strong>Shell:</strong> <code>/bin/bash</code> (bash 3.2, the version Apple ships). The script
+      re-execs itself under <code>/bin/bash</code> if launched with <code>sh</code>/<code>zsh</code> or in POSIX mode.</li>
+    <li><strong>External commands, all built into macOS:</strong> <code>diskutil</code>, <code>rsync</code>
+      (Apple's openrsync), <code>osascript</code>, <code>dd</code>, <code>sync</code>, <code>mdutil</code>,
+      <code>dot_clean</code>, <code>xattr</code>, <code>defaults</code>, <code>scutil</code>, <code>df</code>,
+      <code>du</code>, <code>find</code>, <code>mktemp</code>, <code>pkill</code>, <code>sed</code>/<code>awk</code>.</li>
+    <li><strong>No third-party software</strong> is installed or required. Nothing is downloaded.</li>
+    <li><strong>No <code>sudo</code> / no root.</strong> All disk operations go through <code>diskutil</code>
+      (which uses macOS's privileged Disk Arbitration service without a password). The script never
+      escalates privileges.</li>
+    <li><strong>No network access.</strong> See §9.</li>
+  </ul>
+
+  <h2 id="destruction">3. What it destroys</h2>
+  <p>For every disk the operator selects, the script runs
+  <code>diskutil eraseDisk FAT32 &lt;LABEL&gt; MBRFormat /dev/diskN</code>. This wipes the
+  <strong>entire physical disk</strong> — every partition and every volume on it — and writes a new
+  MBR partition map with a single full-size FAT32 volume. Selection is at the level of whole physical
+  disks, never individual partitions.</p>
+  <div class="callout warn">
+    The operator explicitly selects and confirms which disks are erased (§4, §5). The tool has no
+    “erase everything automatically” mode; nothing is erased without an on-screen confirmation that
+    lists the disks by size and volume names.
+  </div>
+
+  <h2 id="flow">4. Operational flow</h2>
+  <ol class="flow">
+    <li><strong>Shell guard.</strong> Re-exec under <code>/bin/bash</code> if not already running there.</li>
+    <li><strong>Volume label prompt.</strong> Asks for the FAT label (default <code>PLAYER</code>); input
+      is sanitized to <code>[A-Za-z0-9]</code>, uppercased, truncated to 11 chars. <code>REDO</code> is reserved.</li>
+    <li><strong>Resolve source disk(s).</strong> Determines which physical disk(s) hold the content folder
+      (walking APFS synthesized→physical) so they can never be erased.</li>
+    <li><strong>Enumerate targets.</strong> Lists external <em>physical</em> disks, skipping the source disk(s)
+      and any write-protected (read-only) media. Captures each disk's exact byte size for later re-checks.</li>
+    <li><strong>Pick &amp; confirm (two dialogs).</strong> A native list of whole disks (all preselected;
+      Cmd-click to deselect ones to keep), then an explicit “ERASE these / KEEP these” summary whose
+      default button is <em>Back</em>.</li>
+    <li><strong>Consent-gated side effects.</strong> Only after confirmation: disable Finder <code>.DS_Store</code>
+      writes to USB volumes, and strip extended attributes from the source.</li>
+    <li><strong>Erase (parallel).</strong> Each disk is re-verified (§5) then <code>eraseDisk</code>'d, with one retry.</li>
+    <li><strong>Prepare &amp; verify.</strong> Mount each freshly erased volume; proceed only if its name is the
+      chosen label and it resolves to the expected device node.</li>
+    <li><strong>Copy (parallel).</strong> <code>rsync</code> the content to each verified volume, with
+      before/after mount re-verification.</li>
+    <li><strong>Scrub &amp; eject.</strong> Remove macOS junk that FAT can't avoid (§7), then eject (with retries).</li>
+    <li><strong>Results.</strong> Group every device into <span class="tag ok">OK</span>
+      <span class="tag check">CHECK</span> <span class="tag redo">REDO</span>; blink failed devices;
+      always print device-verification advice.</li>
+    <li><strong>Run again.</strong> Offer to restart for the next batch (re-execs the script).</li>
+  </ol>
+
+  <div class="callout ok">
+    <strong>Files are copied in name order, recursively — by design.</strong> The copy is done with
+    <code>rsync</code>, which transfers its file list in sorted path order (alphabetical by full path,
+    depth-first through subfolders). Because the target volume is freshly formatted, each file's FAT
+    <em>directory entry</em> is created in that same order — so the files are physically laid down on the
+    device in order. Minimal player firmware that reads files in directory-entry order (rather than
+    sorting them itself) therefore reads and plays the content in the intended sequence. This is why the
+    content folders and files are numbered (<code>001…</code>, <code>002…</code>): the numbering is the
+    play order, and the sorted copy preserves it onto the device.
+  </div>
+
+  <h2 id="guards">5. Safety guards &amp; rationale</h2>
+  <p>These are the checks that matter for “is it safe to run/re-publish.” Most exist because an earlier
+  version lacked them and adversarial review found a concrete failure.</p>
+  <table>
+    <tr><th>Guard</th><th>Mechanism</th><th>Why</th></tr>
+    <tr><td>Never erase the source</td>
+      <td>Resolve the content folder's physical disk(s) via <code>df</code> → <code>Part of Whole</code> → <code>APFS Physical Store</code>, and exclude them from the target list.</td>
+      <td><code>df</code> reports an APFS <em>synthesized</em> node; without the walk, a source kept on an external APFS SSD could be selected and erased.</td></tr>
+    <tr><td>Skip write-protected media</td>
+      <td>Skip any disk whose <code>diskutil info</code> reports <code>Media Read-Only: Yes</code>.</td>
+      <td>Hardware-locked cards (e.g. MegaVoice CSD lock) can't be written; skipping avoids confusing mid-run failures.</td></tr>
+    <tr><td>External physical only</td>
+      <td>Targets come solely from <code>diskutil list external physical</code>.</td>
+      <td>Internal disks are never enumerated as candidates.</td></tr>
+    <tr><td>Two-step human confirmation</td>
+      <td>A disk picker (deselect to keep) plus a distinct “ERASE / KEEP” summary dialog defaulting to <em>Back</em>.</td>
+      <td>Shows exactly what will be wiped, by size and volume name, before any destruction; the plain-click-replaces-selection trap is defused by the second dialog.</td></tr>
+    <tr><td>Pre-erase identity re-check</td>
+      <td>Immediately before each <code>eraseDisk</code>, re-verify the disk's exact byte size equals what was shown <em>and</em> it is still external+physical; else skip.</td>
+      <td>macOS reuses <code>diskN</code> numbers; a device unplugged/replugged while the dialog was open could otherwise map the identifier to a different disk (TOCTOU).</td></tr>
+    <tr><td>Post-erase volume verify</td>
+      <td>Copy only to a disk whose freshly mounted volume has the chosen label <em>and</em> whose mount resolves to <code>/dev/diskNs1</code>.</td>
+      <td>If an erase silently failed, an old/foreign partition could otherwise be copied onto and reported OK.</td></tr>
+    <tr><td>Copy-time mount re-verify (<code>ok_mount</code>)</td>
+      <td>Before and after <code>rsync</code>, confirm <code>df &lt;mount&gt;</code> is still <code>/dev/diskNs1</code>.</td>
+      <td>If a device vanishes, macOS can leave <code>/Volumes/&lt;name&gt;</code> as a plain folder on the <strong>boot disk</strong>; writing there would copy the payload onto the internal drive.</td></tr>
+    <tr><td>Blink write guard</td>
+      <td>The LED-blink loop re-checks <code>df == /dev/diskNs1</code> before <em>every</em> write, and only blinks volumes named as the current or <code>REDO</code> label.</td>
+      <td>The blink dialog asks the operator to unplug devices while they blink; without this guard a yanked device's ghost mountpoint would receive writes on the boot disk (same class as above).</td></tr>
+    <tr><td>Consent-first side effect</td>
+      <td>The one host setting it toggles (<code>DSDontWriteUSBStores</code>) is changed only after the erase
+      is confirmed, and restored on exit (§9).</td>
+      <td>A user who cancels leaves their Mac untouched.</td></tr>
+    <tr><td>Stall timeout</td>
+      <td>A copy with zero write progress for <code>STALL_LIMIT</code> (300&nbsp;s) is killed and marked <span class="tag redo">REDO</span>.</td>
+      <td>A dying USB stick can't wedge the whole batch.</td></tr>
+    <tr><td>Interrupt handling</td>
+      <td><code>trap</code> on INT/TERM stops blink loops, kills jobs, and lists incomplete devices; an EXIT trap removes the temp dir.</td>
+      <td>Ctrl-C leaves a clear record of which devices must not be distributed.</td></tr>
+    <tr><td>Label sanitization</td>
+      <td>Alphanumeric only, uppercased, ≤11 chars.</td>
+      <td>FAT stores labels uppercase; punctuation can be transformed by <code>diskutil</code>, which would break the post-erase name check.</td></tr>
+  </table>
+
+  <h2 id="concurrency">6. Concurrency &amp; performance</h2>
+  <p>Erase and copy both fan out one background subshell per device and <code>wait</code>. Each subshell
+  writes a single status file into a private <code>mktemp -d</code> directory; the main process polls
+  those files to drive the progress bar and the final grouping — there is no shared mutable state
+  between workers. The LED-blink loops are background jobs governed by a flag file and stopped with
+  <code>kill</code>/<code>pkill</code> (never an unbounded <code>wait</code>, so a device stuck in I/O
+  can't hang the script). ANSI colour is emitted only to a TTY and is kept out of the status files so
+  parsing stays clean.</p>
+
+  <div class="callout ok">
+    <strong>Why this is much faster than imaging a device.</strong> Restoring a disk image (e.g. with
+    <code>dd</code> or Balena Etcher) writes the <em>entire image</em> — including empty space — to each
+    device, and typically <em>reads it all back</em> to validate; a 2&nbsp;GB image can mean up to ~4&nbsp;GB
+    of I/O per device. This tool instead does a plain <code>rsync</code> of just the real content
+    (≈1.6&nbsp;GB), with no image and no read-back verification pass. Three things compound the win:
+    <ul>
+      <li><strong>Only real bytes move</strong> — the actual files, not a whole-disk image plus its slack,
+        and no validation re-read.</li>
+      <li><strong>Every device runs in parallel</strong> — erase and copy fan out across all devices at once,
+        so wall-clock is roughly the slowest single device, not the sum of all of them.</li>
+      <li><strong>Spotlight is held off each device</strong> — <code>mdutil -i off</code> stops
+        <code>mds</code>/<code>mdworker</code> from indexing each freshly-mounted volume mid-write, which
+        would otherwise contend for the device's limited I/O — a real drag when many cheap USB devices are
+        written simultaneously (§7).</li>
+    </ul>
+    In practice the remaining bottleneck is the shared USB-hub/device bandwidth, not the Mac or the tool;
+    splitting devices across multiple hubs on separate ports raises the ceiling further.
+  </div>
+
+  <h2 id="junk">7. macOS junk handling</h2>
+  <p>macOS forces some metadata onto any FAT volume it mounts. The script's posture, verified against
+  the OS:</p>
+  <ul>
+    <li><code>.DS_Store</code> — Finder's writing of it to USB volumes is suppressed for the duration of a
+      run (machine-wide default, restored on exit — see §9) so none can land ahead of the content in FAT
+      directory order; it is also excluded from the copy and scrubbed off each device as backstops.</li>
+    <li><code>._*</code> AppleDouble — <strong>cannot be prevented</strong> on current macOS: they are synthesized
+      on FAT for any file carrying the unclearable <code>com.apple.provenance</code> xattr. They are therefore
+      <em>scrubbed</em> after the copy (<code>dot_clean</code> + <code>find -delete</code>), not prevented.</li>
+    <li><code>.Spotlight-V100</code> — created by <code>mdutil -i off</code>; SIP-protected and not removable
+      by a normal user, but tiny and harmless to the players, so it is left and explicitly not treated as junk.</li>
+    <li><code>.fseventsd/no_log</code> — the sanctioned marker that stops event logging; tiny, unavoidable, left in place.</li>
+  </ul>
+  <p>Net on each finished device: only <code>.Spotlight-V100/</code> and <code>.fseventsd/no_log</code>.
+  The script does <strong>not</strong> set a read-only flag on the files (<code>chflags uchg</code> would
+  re-create removable-but-annoying <code>._*</code> sidecars, and a clean volume was judged more valuable;
+  most players/Android ignore the flag anyway).</p>
+
+  <h2 id="failure">8. Failure model &amp; operator verification</h2>
+  <p>Every device ends in exactly one bucket:</p>
+  <ul>
+    <li><span class="tag ok">OK</span> — loaded and ejected (detached; safe to pull).</li>
+    <li><span class="tag check">CHECK</span> — content copied but something needs a human look (e.g. could
+      not eject, so the device is still mounted; or unexpected junk survived the scrub).</li>
+    <li><span class="tag redo">REDO</span> — not loaded; retry. Failed devices are renamed to volume label
+      <code>REDO</code>, left connected, and have their LED blinked (by forced writes) so the operator can find them.</li>
+  </ul>
+  <div class="callout warn">
+    <strong>Undetectable failures.</strong> A device that fully <em>disconnected or lost power</em>
+    mid-copy cannot be reported accurately and will not blink (its light is dark). The script therefore
+    <strong>always</strong> tells the operator to verify devices independently — the recommended check is
+    to use a new/unique label per batch, then re-plug each device and confirm it returns with that label.
+    A steady light means finished; a dark light means it failed too and must be redone. Note that the
+    loading cable/hub may carry data only and not charge a flat battery, so a dark device should be
+    fully recharged (e.g. via solar or a charging cable) before it is reconnected to reload.
+  </div>
+  <p>The end-of-run dialog offers <strong>Run again</strong> (or Done) for both success and failure; on
+  “Run again” the script cleans up (stops blink loops, removes its temp dir) and <code>exec</code>s a
+  fresh copy of itself for the next batch. Because successfully loaded devices are ejected and detach,
+  a re-run naturally shows only the still-connected failures.</p>
+
+  <h2 id="privacy">9. Network &amp; privacy</h2>
+  <p>The script makes <strong>no network connections</strong> and contains no URLs, telemetry, analytics,
+  or update checks. It reads only the content folder and the attached disks, and writes only to the
+  selected external devices. It reads the Mac's computer name (<code>scutil --get ComputerName</code>)
+  solely to reference it in on-screen guidance.</p>
+  <p>It <strong>does not modify the source folder</strong>, and the one persistent host setting it touches
+  is <strong>captured and restored</strong>, so nothing is left changed:</p>
+  <ul>
+    <li><code>DSDontWriteUSBStores</code> (machine-wide Finder default) — set to <code>true</code> for the
+      duration of a run so Finder cannot write a <code>.DS_Store</code> onto a device ahead of the content
+      (which would take an early FAT directory slot). The script <strong>records the pre-run value first and
+      restores it on exit</strong> via the <code>cleanup</code> EXIT trap — writing back <code>true</code>/<code>false</code>,
+      or deleting the key if it was originally absent. The original is captured once and carried across the
+      run-again re-exec, so restoration happens only when the whole session ends (Done, a dead-end, or Ctrl-C),
+      i.e. after every device has been written and ejected — never between batches. Belt-and-suspenders on top
+      of this, junk is also kept off devices by rsync's <code>--exclude</code> list and a per-device scrub (§7).</li>
+    <li><code>mdutil -i off &lt;mountpoint&gt;</code> — <strong>scoped to the target volume</strong> (suppresses
+      Spotlight indexing on that device during the copy); its only artifact lives on the device, which is
+      erased on the next run. No global preference is set.</li>
+    <li>The source folder is left untouched: rsync's excludes already keep its <code>.DS_Store</code>/<code>._*</code>
+      out of the copy, so there is no need to strip the source's own extended attributes or delete from it.</li>
+  </ul>
+
+  <h2 id="limits">10. Known limitations / non-goals</h2>
+  <ul>
+    <li>Cannot detect a device that fully disconnected/powered-off mid-copy (see §8) — independent verification is required.</li>
+    <li>Does not enforce write-protection on the loaded files (by design; see §7).</li>
+    <li>Cannot remove <code>.Spotlight-V100</code>/<code>.fseventsd</code> (SIP / OS-mandated).</li>
+    <li>macOS-only; relies on <code>diskutil</code> and Apple's <code>osascript</code>/<code>openrsync</code>.</li>
+    <li>Correct playback order (§4) depends on <code>rsync</code>'s sorted transfer; both Apple's openrsync and standard rsync provide it, but a substitute copy tool would need the same guarantee.</li>
+  </ul>
+
+  <h2 id="audit">11. Auditing notes</h2>
+  <p>The script is a single self-contained file with no obfuscation; every destructive command is
+  <code>diskutil eraseDisk</code> and every write target is validated against <code>/dev/diskNs1</code>
+  immediately before use. To audit quickly: read the guards in §5 against the code, and grep for the
+  three commands that touch disks — <code>eraseDisk</code>, <code>rsync</code>, and the blink
+  <code>dd</code> — confirming each is preceded by the identity/mount check described above. The tool was
+  hardened across several rounds of adversarial review; the current guards are the result.</p>
+
+  <h2 id="license">12. License &amp; reuse rights</h2>
+  <div class="lic">
+    <p><strong>Audio Player Loader is licensed under the GNU Affero General Public License, version 3.0
+    (AGPL-3.0).</strong><br>Copyright © 2026 Seth Johnston.</p>
+    <p>The full license text is included as <code>LICENSE.txt</code> and is the authoritative terms. The
+    summary below is plain-language guidance, <em>not legal advice</em>.</p>
+  </div>
+  <h3>What the license lets you do</h3>
+  <p>You are free to <strong>use, study, modify, and redistribute</strong> this script — including on your
+  own website, for your own devices and content. There is no fee and no need to ask permission.</p>
+  <p><strong>Rebrand it freely.</strong> The <code>APP_TITLE</code> variable at the top of the script sets
+  the name shown in every dialog, notification, and the Terminal title. Device manufacturers and others
+  are explicitly welcome to change it to their own product name and ship it for their own players — the
+  author encourages this. (Under AGPL-3.0 your rebranded version must still stay open source under the
+  same license and keep the original copyright notice alongside your own.)</p>
+  <h3>The conditions (copyleft)</h3>
+  <ul>
+    <li><strong>Keep it open.</strong> If you distribute the script or any modified version, it must remain
+      under AGPL-3.0, and you must make the <strong>complete source</strong> available to whoever receives it.</li>
+    <li><strong>Keep the notices.</strong> Preserve the copyright line (“© 2026 Seth Johnston”) and the license
+      notice. You may add your own copyright for your changes.</li>
+    <li><strong>Network use counts as distribution (the “Affero” clause, §13).</strong> If you modify the script
+      and let other people use your modified version <em>over a network</em> — for example a web app that runs it
+      server-side — you must offer those users the source of your modified version. For an ordinary downloadable
+      script this rarely comes into play, but it is AGPL's key difference from plain GPL.</li>
+    <li><strong>No added restrictions and no warranty.</strong> You can't relicense it under more restrictive
+      terms, and the software comes with no warranty; the author is not liable (see LICENSE.txt §15–17).</li>
+  </ul>
+  <h3>In practice, for re-publishing on your own site</h3>
+  <p>You may host it, adapt it for your own player devices and audio content, and share it, provided you
+  (1) keep it under AGPL-3.0, (2) include <code>LICENSE.txt</code> and this copyright notice, and (3) offer
+  your recipients (or your network users, if you run a modified version as a service) the corresponding
+  source of whatever version you ship. If those terms don't fit your use, contact the copyright holder to
+  ask about a separate licensing arrangement.</p>
+
+  <footer>
+    Audio Player Loader — technical specifications. Script: <code>load_content.sh</code>.
+    Licensed under <a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL-3.0</a>; © 2026 Seth Johnston.
+    This document is a description of the software, not a warranty; the software is provided “as is”.
+  </footer>
+
+</div>
+</body>
+</html>

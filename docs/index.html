@@ -51,7 +51,10 @@
     box-shadow:0 1px 4px rgba(0,0,0,.06);
   }
   figcaption{color:var(--muted); font-size:.82rem; margin-top:6px; text-align:center;}
-  table{border-collapse:collapse; width:100%; margin:1em 0; font-size:.95rem; display:block; overflow-x:auto;}
+  table{border-collapse:collapse; width:100%; margin:1em 0; font-size:.95rem;}
+  .tscroll{overflow-x:auto; margin:1em 0; -webkit-overflow-scrolling:touch;}
+  .tscroll > table{margin:0;}
+  table.wide{min-width:960px;}
   th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top;}
   th{background:var(--accent-soft);}
   td code{white-space:nowrap;}
@@ -314,7 +317,7 @@
   humidity make some devices fail — expect it. The RESULTS summary at the end sorts every
   device:</p>
 
-  <table>
+  <div class="tscroll"><table>
     <tr><th>Group</th><th>Meaning</th></tr>
     <tr>
       <td><span class="tag good">GOOD</span></td>
@@ -331,7 +334,7 @@
       <td>Not loaded — retry these. They are still connected and have been renamed to
       <strong>"REDO"</strong>, so you can spot them.</td>
     </tr>
-  </table>
+  </table></div>
 
   <figure>
     <img class="shot" src="images/09-results.png" alt="Screenshot: the RESULTS summary showing GOOD and REDO groups">
@@ -431,7 +434,7 @@
   </div>
 
   <h2>Troubleshooting</h2>
-  <table>
+  <div class="tscroll"><table>
     <tr><th>Message</th><th>What it means / what to do</th></tr>
     <tr><td><code>Skipping diskN — WRITE-PROTECTED</code></td>
         <td>That device (or card) has a hardware write-protect lock. Unlock it and run again.</td></tr>
@@ -456,7 +459,7 @@
     <tr><td>A red-icon alert pops up</td>
         <td>The script raises an on-screen alert for the show-stoppers — no external devices
         found, or none could be prepared. It tells you what to check; fix it and run again.</td></tr>
-  </table>
+  </table></div>
 
   <div class="callout warn">
     <strong>Advanced (not generally recommended): loading from a device instead of a folder on your Mac.</strong>
@@ -512,7 +515,7 @@
 
 <p>Low-cost solar audio players — the family this tool's workflow is modeled on (Hope Tech Global's own <code>HTGv4.CMD</code> loader). Loading a KULUMI is a plain file copy in the right order onto a FAT32 volume.</p>
 
-<table>
+<div class="tscroll"><table>
 <tr><th>&nbsp;</th><th>KULUMI Mini</th><th>KULUMI X</th><th>KULUMI Sheep</th></tr>
 <tr><td>What it is</td><td>Solar lamp + audio player + FM + phone charger</td><td>Pocket solar player (IP65)</td><td>Audio player in a plush sheep (for children)</td></tr>
 <tr><td>Loads via</td><td>Removable microSD in a USB card reader (open-slot version) <em>or</em> the cable</td><td>USB drive mode over the cable (no removable card)</td><td>USB drive mode over the cable (no removable card)</td></tr>
@@ -522,7 +525,7 @@
 <tr><td>Filenames</td><td>Numbered with leading zeros (001, 002…) so they sort in play order; plain ASCII</td><td>Numbered with leading zeros; plain ASCII</td><td>Numbered with leading zeros; plain ASCII</td></tr>
 <tr><td>Audio format</td><td>MP3</td><td>MP3</td><td>MP3</td></tr>
 <tr><td>Verdict</td><td><strong>Tested &amp; verified</strong></td><td>Not yet tested — expected to work</td><td>Not yet tested — expected to work</td></tr>
-</table>
+</table></div>
 
 <div class="callout"><strong>KULUMI Mini — confirmed working with this tool.</strong> The developer has tested and verified it. It loads over Hope Tech Global's <strong>red</strong> data cable as well as the green. Some Mini variants have a removable microSD card and some do not, but <strong>all variants load via the cable</strong>. The cleanest path is the open-slot version: pull the microSD, load it in a card reader, return it — no special cable needed.</div>
 
@@ -543,7 +546,7 @@
 <p>MegaVoice does <strong>not</strong> use one universal folder layout — <em>the required structure differs by model</em>, and every model plays files in <strong>name-sort order</strong>, so zero-padded numeric prefixes (<code>001</code>, <code>002</code>…) are what guarantee correct playback for a copy-in-sorted-order tool. The table below summarizes each family; see the <strong>Loading docs</strong> links for the authoritative manufacturer PDF.</p>
 <div class="callout warn"><strong>Envision is the key exception.</strong> It is the one model that even reads a copied folder tree from external microSD/USB-OTG, but external media <strong>requires MegaVoice's Windows encryption</strong> (adds a <code>$ME</code> token to each filename, e.g. <code>name$ME.mp4</code>). Plain, unencrypted files on a FAT32 card are <strong>skipped/ignored</strong> — Envision is <strong>not loadable</strong> with a plain FAT copy.</div>
 <div class="callout"><strong>Loading method matters.</strong> The classic solar audio-only players (Ambassador, Messenger, LifeLight, Pathway, Envoy 3, PocketVoice) do not mount as a plain USB/FAT drive — their onboard memory is programmed only via MegaVoice's Windows <code>SaberCopy</code> app plus a proprietary <em>SLS</em> cable. Where these have a microSD slot, SaberCopy can prepare the card. Envoy 2 S/E series, Companion/Shield, and Herald can be loaded by writing a correctly-built tree directly to their FAT32 storage/microSD.</div>
-<table>
+<div class="tscroll"><table class="wide">
 <tr><th>Model</th><th>Folder structure (levels)</th><th>Filename rule</th><th>Audio format</th><th>Loadable with a plain FAT copy?</th></tr>
 <tr>
 <td><strong>Envoy 2 S Series</strong> (S / S Dual / ST)</td>
@@ -615,7 +618,7 @@
 <td>MP3 / WAV</td>
 <td><strong>No (plain copy) — (unverified — see PDF)</strong>; no per-model manufacturer PDF located, low confidence</td>
 </tr>
-</table>
+</table></div>
 
 <div class="callout warn"><strong>Watch which volume you erase.</strong> Over the SLS cable a MegaVoice player can present <em>two</em> volumes at once — its internal memory and an inserted card — so read the chooser and the “ERASE / KEEP” summary carefully. If you only want to load a card, taking it out and using a standalone USB card reader keeps things unambiguous. The <strong>Envision is the exception</strong> to all of this: it plays only encrypted files, so a plain MP3 copy is ignored — use MegaVoice's own tooling for it.</div>
 
@@ -662,13 +665,13 @@
 </ol>
 <p>(Or open <strong>Disk Utility</strong> — Applications ▸ Utilities ▸ Disk Utility — and click the volume; its format shows just under the name.)</p>
 <p><strong>What the Mac's names actually mean</strong> — the Mac labels don't match the Windows terms people expect:</p>
-<table>
+<div class="tscroll"><table>
 <tr><th>What the Mac shows</th><th>What it really is</th><th>Safe to load with this tool?</th></tr>
 <tr><td><code>MS-DOS (FAT32)</code></td><td>FAT32</td><td><strong>✅ Yes</strong> — exactly what this tool writes. It matches; go ahead.</td></tr>
 <tr><td><code>MS-DOS (FAT16)</code> or <code>MS-DOS (FAT)</code></td><td>older FAT (FAT16)</td><td><strong>⚠ Usually</strong> — this tool writes FAT32, which most players also read. But a few tiny/old players need FAT16 specifically; if yours does, don't load it until you've confirmed.</td></tr>
 <tr><td><code>ExFAT</code></td><td>exFAT</td><td><strong>⚠ Check first</strong> — exFAT is <em>not</em> the same as FAT32. This tool will reformat it to FAT32. Most players accept FAT32, but if this player <em>requires</em> exFAT it will stop reading — confirm before loading.</td></tr>
 <tr><td><code>Mac OS Extended</code> or <code>APFS</code></td><td>Apple-only formats (HFS+ / APFS)</td><td><strong>❗ Stop</strong> — a player would never ship in these, and most can't read them at all. You may be looking at the wrong disk (e.g. your Mac's own drive) — double-check before erasing anything.</td></tr>
-</table>
+</table></div>
 <p><strong>In short:</strong> if it already says <code>MS-DOS (FAT32)</code>, you're matched — proceed. If it says <code>ExFAT</code> or an old FAT16 and you're not sure the player accepts FAT32, hold off and confirm with the maker. Either way, <strong>load one device and test it in the actual player before a whole batch.</strong></p>
 </details>
 

@@ -112,7 +112,7 @@ This loader is **player-agnostic**: it makes one clean, full-size FAT32 volume o
 3. **Plain files** — it plays unencrypted audio (normally MP3) dropped into folders, not a locked container built by the maker's own software.
 4. **Predictable order** — it plays by name-sort or by copy order, so numbered folders and tracks come out in sequence.
 
-The one genuine hard limit: a player that exposes *no* removable card *and* *no* USB drive mode gives a drive-based loader nothing to write to — load those with the maker's own software.
+The real limits are two: a player that exposes *no* writable storage at all (even over its own data/programming cable), or one whose firmware plays only the maker's **encrypted/packaged** content — e.g. MegaVoice **Envision** or the **Davar/Kivah Audibible** — rather than plain files. Everything else, including players that need a special cable to appear as a USB drive, is just a matter of getting the source folder right.
 
 **Researched player families:** KULUMI / Hope Tech Global (Mini — **tested & verified**; X; Sheep), MegaVoice (Companion/Shield, Herald, Envoy 2, Envision), Renew World Outreach (The Torch), Faith Comes By Hearing (Proclaimer, BibleStick, Micro Proclaimer), GRN Saber, and generic FAT MP3 players / USB-SD radios.
 

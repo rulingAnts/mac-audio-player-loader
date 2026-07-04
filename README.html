@@ -498,7 +498,7 @@
 
 <div class="callout info"><strong>Sealed player with a removable card?</strong> If a player is factory-sealed but has a card you can take out, you load it <em>via the card</em>: pull the card, load it in a USB card reader, and return it. The player never has to mount at all.</div>
 
-<div class="callout warn"><strong>The one genuine hard limit.</strong> If a player exposes <em>no</em> removable card <em>and</em> <em>no</em> USB drive/disk mode, a drive-based loader has nothing to write to. Those players load only with the maker's own software over the maker's own cable. That is the single case this tool cannot help with directly — everything else is a matter of getting the source folder right.</div>
+<div class="callout warn"><strong>The two real limits.</strong> Almost every player exposes writable storage one way or another — even ones that need a special “programming” or data cable usually appear as an <em>ordinary USB drive</em> once that cable is connected, and this tool loads those fine. Only two situations genuinely stop a drive-based loader: <strong>(1)</strong> a player that exposes <em>no</em> writable storage at all — no card, and nothing mounts over its cable; and <strong>(2)</strong> a player whose firmware plays only the maker's <strong>encrypted / packaged</strong> content instead of plain files — for example MegaVoice's <strong>Envision</strong> and the <strong>Davar / Kivah Audibible</strong> (which plays a single encrypted bundle on its card; naked MP3s are ignored). Use the manufacturer's own software for those. Everything else is just a matter of getting the source folder right.</div>
 
 <h2>Player families</h2>
 
@@ -532,25 +532,24 @@
 
 <h3>MegaVoice</h3>
 
-<p>Solar/rechargeable audio-Bible players used widely in missions. MegaVoice's own loading path is their proprietary <strong>SLS cable</strong> plus <strong>SaberCopy</strong> software, which writes the player's internal memory. This tool is <em>not yet tested</em> with MegaVoice but is expected to work — most straightforwardly through the removable microSD on the card-based models.</p>
+<p>Solar/rechargeable audio-Bible players used widely in missions. <em>Not yet tested with this tool, but expected to work.</em> Connect MegaVoice's <strong>SLS data cable</strong> and the player's storage — its internal memory, plus the microSD card too if one is inserted — mounts on the Mac as an <strong>ordinary writable USB drive</strong>. From there the mechanism is the same one SaberCopy uses: wipe the volume and write the files in the right order (which this tool does). SaberCopy is smarter, more customizable and friendlier, but the underlying principle is identical — so as long as you match MegaVoice's folder structure, filenames, and supported formats, this tool should load it. (The microSD is <em>not</em> the main path — the cable is — and where a card is used it follows the same strict structure rules as the internal memory.)</p>
 
 <table>
 <tr><th>Model</th><th>Loads via</th><th>Notes</th></tr>
-<tr><td>Companion / Shield</td><td>Removable microSD in a card reader (plain file copy)</td><td>Internal memory needs the SLS cable + SaberCopy; the <strong>card</strong> is plain FAT32 and the natural path for this tool.</td></tr>
-<tr><td>Herald</td><td>Removable microSD in a card reader</td><td>Same two-path model as Companion. Load the card, not the internal flash.</td></tr>
-<tr><td>Envoy 2 (S / E series)</td><td>Internal flash only — via SLS cable + SaberCopy</td><td>Standard Envoy 2 models have no removable card, so no removable storage is exposed to a drive loader; load these with SaberCopy. Not yet tested — expected to work if a given unit has a card.</td></tr>
-<tr><td>Envision</td><td>Removable microSD, but <strong>encrypted files only</strong></td><td>Its card mounts, but it plays only MegaVoice-encrypted files; plainly-copied MP3s are ignored. Load with MegaVoice's Windows encryptor / SaberCopy.</td></tr>
+<tr><td>Companion / Shield / Herald</td><td>SLS data cable → mounts as a USB drive (internal memory, and the card too if inserted)</td><td>Plain FAT32; expected to work. A card, where present, follows the same structure rules as the internal memory.</td></tr>
+<tr><td>Envoy 2 (S / E series)</td><td>SLS data cable → mounts as a USB drive</td><td>No removable card on standard units, but the cable still exposes the internal memory as a writable drive. Not yet tested — expected to work.</td></tr>
+<tr><td>Envision</td><td>Plays <strong>encrypted files only</strong></td><td>Its storage mounts, but the firmware plays only MegaVoice-encrypted content — plainly-copied MP3s are ignored. This tool cannot prepare it; use MegaVoice's own encryptor.</td></tr>
 </table>
 
 <ul>
-<li><strong>Filesystem:</strong> the microSD must be <strong>FAT32</strong> for any MegaVoice player with a card reader. exFAT is not indicated.</li>
+<li><strong>Filesystem:</strong> the target volume must be <strong>FAT32</strong> — whether it's the internal memory over the SLS cable or a microSD card. exFAT is not indicated.</li>
 <li><strong>Folder structure:</strong> four levels — Channel → Section → Book → Chapter (audio files). Channel and Section folders need a <strong>3-digit numeric prefix</strong> (e.g. <code>001</code>, or <code>001-English</code>); no empty primary folders.</li>
 <li><strong>Filenames:</strong> 3-digit numeric prefixes so everything sorts in play order; free text may follow the prefix.</li>
 <li><strong>Audio format:</strong> MP3/WAV/WMA on the older players; the Companion additionally accepts AAC-LC, FLAC, OGG and others. DRM-protected files are not supported. No hard bitrate cap is published — confirm with MegaVoice if you need an exact number.</li>
 <li><strong>Play order:</strong> name-sort — "the names of all folders and audio files must sort in the order they should be played." A 3-digit prefix guarantees it, and this tool's sorted copy satisfies it.</li>
 </ul>
 
-<div class="callout warn"><strong>Card-reader tip.</strong> When you load the card <em>inside</em> the player, both the onboard memory and the card can appear as volumes — it is easy to erase the wrong one. Prefer a standalone USB card reader so only the card mounts. The <strong>Envision is the exception</strong>: its card requires encrypted files, so a plain MP3 copy will be ignored — use MegaVoice's own tooling for it.</div>
+<div class="callout warn"><strong>Watch which volume you erase.</strong> Over the SLS cable a MegaVoice player can present <em>two</em> volumes at once — its internal memory and an inserted card — so read the chooser and the “ERASE / KEEP” summary carefully. If you only want to load a card, taking it out and using a standalone USB card reader keeps things unambiguous. The <strong>Envision is the exception</strong> to all of this: it plays only encrypted files, so a plain MP3 copy is ignored — use MegaVoice's own tooling for it.</div>
 
 <p><strong>Loading / programming documentation:</strong> <a href="https://megavoice.com/audio-cloud/how-to-guide-for-loading-audio-content-on-audio-bibles/">MegaVoice how-to guide for loading audio content</a>, the <a href="https://megavoice.com/pdf/Companion%20and%20Shield%20User%20Guide%2020191217-32.pdf">Companion &amp; Shield User Guide (PDF)</a>, and <a href="https://megavoice.com/formatting-audio-bible/">formatting guidance</a>.</p>
 
@@ -597,6 +596,10 @@
 </ul>
 
 <p><strong>Loading / programming documentation:</strong> <a href="https://globalrecordings.net/en/saber-how-to-use">globalrecordings.net — Saber how to use</a> and <a href="https://globalrecordings.net/en/sabercopy">SaberCopy</a>.</p>
+
+<h3>Kivah / Davar Audibible</h3>
+
+<p><em>Not supported by this tool.</em> The Audibible plays a <strong>single encrypted bundle</strong> of MP3s and other content on its SD card, built by the manufacturer's software; its firmware will not play plain, individually-copied MP3 files. Because this tool writes ordinary files, the player won't read what it produces — load these with the maker's own tooling. (Listed here so it's clear <em>why</em> it's an exception, not an oversight.)</p>
 
 <h3>Generic FAT MP3 players, USB/SD radios &amp; speakers</h3>
 

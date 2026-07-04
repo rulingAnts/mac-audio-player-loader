@@ -277,8 +277,9 @@
       <div class="callout">
         💡 <strong>The devices blink while they load — that's normal.</strong> Their lights flicker as
         data is written. What matters is the light <strong>after the run finishes:</strong> a device the
-        tool flags as failed is made to <strong>keep blinking</strong> so you can find it; a
-        <strong>steady/solid</strong> light means it finished; and <strong>no light at all</strong> means
+        tool flags as failed is made to keep blinking, so a light <strong>still blinking</strong> once the
+        run ends means that device failed; a <strong>steady/solid</strong> light means it finished; and
+        <strong>no light at all</strong> means
         its battery died (it failed too). See <em>When some devices fail</em>, below.
       </div>
     </li>
@@ -334,12 +335,12 @@
 
   <figure>
     <img class="shot" src="images/run-again-redo.png" alt="Screenshot: the Run again dialog after a run where some devices failed">
-    <figcaption>…and the matching <strong>Run again?</strong> dialog: leave the blinking failures connected, unplug the rest, then Run again.</figcaption>
+    <figcaption>…and the matching <strong>Run again?</strong> dialog, sorting devices into three piles by their light: still-blinking (failed) stay connected; solid (loaded) and dark (dead battery) come off.</figcaption>
   </figure>
 
   <p><strong>Easiest way to finish a batch:</strong> when the run ends, a dialog asks
   <strong>Run again?</strong> <strong>Unplug the finished devices and set them aside; leave the
-  blinking failures plugged in</strong> (sorting details below). Add a fresh batch of devices too if
+  still-blinking failures plugged in</strong> (sorting details below). Add a fresh batch of devices too if
   you like, then click <strong>Run again</strong>. Because the finished devices have already ejected
   and detached, only the still-connected <strong>REDO</strong> failures — plus anything new you added
   — show up in the list, so it redoes just the failures. Repeat until nothing is left blinking. The
@@ -349,10 +350,10 @@
   <h3>Which physical device failed?</h3>
   <p>When the run finishes with failures, the script helps you find them two ways,
   automatically:</p>
-  <p><strong>1. It blinks the failed devices' lights — so leave those plugged in.</strong> A pop-up
-  lists the failures and <strong>blinks their lights</strong> so you can spot them in the hub. Do the
-  <em>opposite</em> of unplugging them: take out the devices that are <strong>not</strong> blinking
-  and sort them into piles by their light:</p>
+  <p><strong>1. The still-blinking lights are the failures — so leave those plugged in.</strong>
+  Every device blinks <em>while</em> it loads; the ones <strong>still blinking</strong> once the run has
+  finished (when the pop-up appears) are the ones that failed. So do the <em>opposite</em> of unplugging
+  those: leave the still-blinking devices connected, and take out the rest and sort them by their light:</p>
   <ul>
     <li><strong>Steady / solid light — finished.</strong> These loaded and were ejected. Unplug them
     and set them aside as your <strong>done</strong> pile. (Still test them later — see
@@ -360,13 +361,13 @@
     <li><strong>No light at all (dark) — dead battery.</strong> The device switched off or its battery
     died mid-copy, so it failed too. Unplug it and set it aside to <strong>charge fully</strong> before
     you reload it.</li>
-    <li><strong>Blinking — failed; leave it connected.</strong> This is a
+    <li><strong>Still blinking — failed; leave it connected.</strong> This is a
     <span class="tag redo">REDO</span> device and stays for the next round.</li>
   </ul>
-  <p>Your hub now holds only the still-connected <strong>blinking</strong> devices. Plug in a fresh
+  <p>Your hub now holds only the <strong>still-blinking</strong> devices. Plug in a fresh
   batch of new devices now too if you want, then click <strong>Run again</strong> — it redoes the
-  blinking failures (and loads any new ones). Repeat until nothing blinks. Choose <strong>Done</strong>
-  when you're finished.</p>
+  still-blinking failures (and loads any new ones). Repeat until nothing is left blinking. Choose
+  <strong>Done</strong> when you're finished.</p>
   <div class="callout warn">
     ⚠️ <strong>Also watch for dark devices.</strong> A device whose battery died or that
     switched off mid-copy shows <strong>no light at all</strong> — not blinking. It failed too

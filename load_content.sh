@@ -215,9 +215,9 @@ run_again_prompt() {
       BLINK_PIDS+=($!); any=1
     done
     if [ "$any" -eq 1 ]; then
-      m="$n_good device(s) loaded; $n_redo did NOT and need redoing."$'\n\n'"The failed devices are BLINKING. You may unplug the devices that are NOT blinking now (test them for correct content later); leave or replace the blinking ones."$'\n\n'"Connect another batch of new devices too if you like, then click \"Run again\" — or \"Done\"."
+      m="$n_good device(s) loaded; $n_redo did NOT and need redoing."$'\n\n'"All devices blink WHILE loading, so look at them now the run is done and sort by light:"$'\n'"•  STILL BLINKING = failed — LEAVE these connected."$'\n'"•  Solid light = loaded OK — unplug and set aside (still test later)."$'\n'"•  Dark / no light = dead battery, also failed — unplug and set aside to charge fully before retrying."$'\n\n'"Add any more devices you want to load, then click \"Run again\" to redo the still-blinking ones — or \"Done\"."
     else
-      m="$n_good device(s) loaded; $n_redo did NOT and need redoing (still connected)."$'\n\n'"You may unplug the good devices now (test them for correct content later). Connect another batch if you like, then click \"Run again\" — or \"Done\"."
+      m="$n_good device(s) loaded; $n_redo did NOT and need redoing (still connected, renamed $REDO_LABEL)."$'\n\n'"Sort by light: solid = loaded (unplug, set aside, test later); dark = dead battery (unplug, charge fully before retrying). Leave the $REDO_LABEL failures connected."$'\n\n'"Add any more devices you want to load, then click \"Run again\" — or \"Done\"."
     fi
   elif [ "$n_check" -gt 0 ]; then
     # Content copied, but CHECK devices need a human look (e.g. could-not-eject
@@ -777,10 +777,10 @@ if [ "$n_redo" -gt 0 ]; then
   echo "off the Mac and will NOT be touched if you run again."
   echo
   echo "The $n_redo failed device(s) are still plugged in, now named \"$REDO_LABEL\"."
-  echo "LEAVE the blinking ones connected. Unplug the devices that are NOT blinking"
-  echo "and sort them: solid light = finished (set aside, test later); no light ="
-  echo "dead battery (set aside to charge). Then add any fresh devices and click"
-  echo "\"Run again\" to redo the still-connected failures."
+  echo "All devices blink WHILE loading; the ones STILL blinking now are the failures."
+  echo "LEAVE those connected. Unplug the rest and sort them: solid light = finished"
+  echo "(set aside, test later); no light = dead battery (set aside to charge fully)."
+  echo "Then add any fresh devices and click \"Run again\" to redo the still-blinking ones."
   echo "Re-seat a failing device's cable; try a different cable and port too."
   echo "Contact cleaner on the connector, or a full charge, can fix stubborn ones."
   echo "In Finder under \"$COMPUTER_NAME\", the only USB volumes still showing are"

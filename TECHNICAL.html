@@ -93,7 +93,12 @@
 
   <h2 id="env">2. Environment &amp; dependencies</h2>
   <ul>
-    <li><strong>OS:</strong> macOS (developed/tested on macOS 26 “Tahoe”). Uses only Apple-supplied tools.</li>
+    <li><strong>OS:</strong> macOS — developed and tested on macOS 26 “Tahoe”. It uses only
+      Apple-supplied command-line tools, all long-standing, so it should run on <strong>macOS 10.13 High
+      Sierra (2017) or later</strong> with high confidence, and very likely back to 10.9 Mavericks (only
+      <code>display notification</code> requires 10.9, and that call is best-effort). The APFS source-disk
+      resolution (§5) is fully exercised on 10.13+; on older HFS+ systems the APFS step simply finds
+      nothing and the physical-disk walk still resolves the source correctly.</li>
     <li><strong>Architecture: universal.</strong> The tool is a shell script, not a compiled binary, so
       there is no architecture-specific build — it runs natively on both Apple Silicon (M-series) and
       Intel Macs. Distribution is source-only; there are no binary artifacts to sign, notarize, or match to a CPU.</li>
@@ -229,7 +234,10 @@
         written simultaneously (§7).</li>
     </ul>
     In practice the remaining bottleneck is the shared USB-hub/device bandwidth, not the Mac or the tool;
-    splitting devices across multiple hubs on separate ports raises the ceiling further.
+    splitting devices across multiple hubs on separate ports raises the ceiling further. The <em>source</em>
+    location matters too: reading the content from the Mac's internal SSD (on its own high-bandwidth bus)
+    never competes with the USB writes, whereas using a USB device as the source is capped by that device's
+    own read speed and can bottleneck the whole batch even on a separate port.
   </div>
 
   <h2 id="junk">7. macOS junk handling</h2>

@@ -76,13 +76,32 @@
   #panel-using, #panel-players{display:none;}
   #rt-using:checked ~ #panel-using{display:block;}
   #rt-players:checked ~ #panel-players{display:block;}
+  /* --- Product branding header --- */
+  .hero{display:flex; gap:16px; align-items:center; margin:0 0 4px;}
+  .hero .logo{width:60px; height:60px; flex:0 0 auto;}
+  .product{font-size:.82rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--accent); margin:0;}
+  .hero h1{margin:.05em 0 0;}
+  .tablink{color:var(--accent); font-weight:600; text-decoration:underline; text-underline-offset:2px; cursor:pointer;}
+  .tablink:hover{opacity:.82;}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <h1>Loading Audio Players</h1>
-  <p class="lead">Mac instructions</p>
+  <header class="hero">
+    <svg class="logo" viewBox="0 0 96 96" aria-hidden="true">
+      <defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2bb3a3"/><stop offset="1" stop-color="#0d8073"/></linearGradient></defs>
+      <rect x="6" y="6" width="84" height="84" rx="20" fill="url(#lg)"/>
+      <circle cx="48" cy="50" r="24" fill="none" stroke="#fff" stroke-width="6"/>
+      <rect x="44" y="34" width="8" height="20" rx="4" fill="#fff"/>
+    </svg>
+    <div>
+      <p class="product">Audio Player Loader</p>
+      <h1>Loading audio players on your Mac</h1>
+    </div>
+  </header>
+  <p class="lead">The native-Mac way to bulk-load your USB audio devices — no Windows, no emulation,
+  nothing to install.</p>
 
   <p><strong>What this does:</strong> erases the USB audio players plugged into your
   Mac and loads your audio content onto all of them at once. You choose exactly
@@ -104,8 +123,8 @@
   <div class="callout info">
     📥 <strong>Get the loader:</strong>
     <a href="https://github.com/rulingAnts/mac-audio-player-loader/releases/latest/download/audio-player-loader-macOS.zip">Download
-    the latest release</a>. It's a tiny <strong>universal Mac</strong> script — it runs on both Apple
-    Silicon and Intel Macs, with nothing to install. You add your own numbered audio-content folders
+    the latest release</a>. It's a tiny <strong>universal Mac</strong> script — it runs on any modern Mac,
+    <strong>Apple Silicon or Intel</strong>, macOS 10.13 (2017) or later, with nothing to install. You add your own numbered audio-content folders
     next to it (see the <strong>Player-Specific Setup</strong> tab).
   </div>
 
@@ -130,6 +149,12 @@
       beside your audio.</p>
       <p>(If someone handed you a ready-made folder, <code>load_content.sh</code> is already inside it
       — just open that folder.)</p>
+      <div class="callout info">
+        🎯 <strong>Setting up your content folder for a specific player?</strong>
+        <label for="rt-players" class="tablink">Click here for your device model's setup</label> — how to
+        structure the folders, name the files, and which audio format and cable or card reader your player
+        needs.
+      </div>
       <figure>
         <img class="shot" src="images/01-folder.png" alt="Screenshot: the unzipped folder with load_content.sh visible">
         <figcaption>The unzipped folder</figcaption>
@@ -249,6 +274,13 @@
         <img class="shot" src="images/08-progress.png" alt="Screenshot: the progress bar running in Terminal">
         <figcaption>The progress bar mid-run</figcaption>
       </figure>
+      <div class="callout">
+        💡 <strong>The devices blink while they load — that's normal.</strong> Their lights flicker as
+        data is written. What matters is the light <strong>after the run finishes:</strong> a device the
+        tool flags as failed is made to <strong>keep blinking</strong> so you can find it; a
+        <strong>steady/solid</strong> light means it finished; and <strong>no light at all</strong> means
+        its battery died (it failed too). See <em>When some devices fail</em>, below.
+      </div>
     </li>
   </ol>
 
@@ -265,6 +297,11 @@
     (Press the <kbd>↑</kbd> Up-Arrow key in Terminal to repeat the previous command, then
     <kbd>Return</kbd>.)
   </div>
+
+  <figure>
+    <img class="shot" src="images/run-again-success.png" alt="Screenshot: the Run again dialog after a fully successful run">
+    <figcaption>After a fully successful run, the same <strong>Run again?</strong> dialog offers the next batch (or Done).</figcaption>
+  </figure>
 
   <h2>When some devices fail</h2>
   <p>This is normal with cheap USB devices. Bad cables, loose connectors, corrosion, or
@@ -293,6 +330,11 @@
   <figure>
     <img class="shot" src="images/09-results.png" alt="Screenshot: the RESULTS summary showing GOOD and REDO groups">
     <figcaption>The end-of-run RESULTS summary</figcaption>
+  </figure>
+
+  <figure>
+    <img class="shot" src="images/run-again-redo.png" alt="Screenshot: the Run again dialog after a run where some devices failed">
+    <figcaption>…and the matching <strong>Run again?</strong> dialog: leave the blinking failures connected, unplug the rest, then Run again.</figcaption>
   </figure>
 
   <p><strong>Easiest way to finish a batch:</strong> when the run ends, a dialog asks
@@ -339,8 +381,10 @@
   <div class="callout">
     🔧 <strong>For a device that keeps failing:</strong> before giving up on it, <strong>re-seat its
     cable</strong> — unplug and firmly reconnect both ends, in case a connector is loose or not fully
-    seated. For stubborn cases, a little <strong>electrical contact cleaner</strong> on the connector
-    can help, and so can a <strong>full charge</strong> — a low battery alone can make a copy fail.
+    seated. Then <strong>try a different cable and a different port or hub</strong> — a single bad cable
+    or port is a common culprit. For stubborn cases, a little <strong>electrical contact cleaner</strong>
+    on the connector can help, and so can a <strong>full charge</strong> — a low battery alone can make a
+    copy fail.
   </div>
 
   <p><strong>2. It marks them in Finder — and macOS helps you avoid pulling the wrong one.</strong>
@@ -426,350 +470,161 @@
         write-locked, so use a spare copy as the master rather than your only good device, and always check
         a freshly loaded device in the real player before doing a big batch.</li>
     </ul>
+    <p><strong>Fastest of all is keeping your content on the Mac's own internal drive.</strong> The
+    internal SSD reads at gigabytes per second on its own bus, so it never competes with the USB writes.
+    A plain USB source device — even on a separate port or bus — reads far slower and can bottleneck the
+    whole batch, because its own read speed is the limit. Use a device as the source only when you have no
+    copy of the content on the Mac.</p>
   </div>
 
   </section><!-- end panel: Using the Loader -->
 
   <section class="tab-panel" id="panel-players" role="tabpanel" aria-labelledby="tab-players">
   <h2>Player-Specific Setup</h2>
-  <p>This loader tool is <strong>player-agnostic</strong>: all it does is make a clean, full-size
-FAT32 volume and copy your numbered folders onto it in play order. It does not know or care which
-brand of player you own. This tab is about matching <em>your source folder and your hardware</em> to
-<em>your specific player</em> so that what the tool copies is what the player will actually read.</p>
+<p>The loader tool itself is <strong>player-agnostic</strong>. It makes a clean, full-size FAT32 volume on each device you select and copies your numbered folders onto it in play order. It does not know or care what brand of player you own. This tab is about matching <em>your source folder and your hardware</em> to <em>your specific player</em> — the folder layout, the filenames, the audio format, and the cable or card reader that particular family expects.</p>
+
+<p>The author is actively expanding the list of tested players. Where a family below is marked <strong>not yet tested</strong>, that is an invitation to try it, not a verdict against it: it will very likely work as long as you set up the source folder structure, filenames, and audio format the way that player expects. As a rule of thumb, the author expects this tool to load essentially any device that GRN/MegaVoice's <strong>SaberCopy</strong> can load, given the right folder structure and format.</p>
 
 <h2>Will my player work?</h2>
 
-<p>A player is loadable with this tool only if all four of these are true:</p>
+<p>Run your player through these four questions. If it clears all four, this tool can load it.</p>
 
 <ol>
-  <li><strong>It shows up as a writable USB disk (or its card does).</strong> Either the player itself
-  mounts on the Mac as an erasable removable drive, or it takes a removable microSD/SD card that you
-  can pull and mount in a USB card reader.</li>
-  <li><strong>It reads a FAT32 volume.</strong> This tool formats FAT32; a player that demands exFAT
-  or some other layout will not read what you produce.</li>
-  <li><strong>It plays plain, unencrypted audio files</strong> (normally MP3) that you organize into
-  folders. Players that require a proprietary or encrypted container will ignore ordinary MP3s.</li>
-  <li><strong>It plays in folder/track order</strong> (either the copy order this tool writes, or a
-  name-sort your numbered folders satisfy).</li>
+<li><strong>Does it expose removable storage?</strong> Either the player mounts as a USB drive when you plug it in, <em>or</em> it has a removable microSD/SD card you can pull and put in a card reader. The tool needs a volume it can write to.</li>
+<li><strong>Can it be formatted FAT32?</strong> Nearly all simple audio players read FAT32. The tool writes one clean full-size FAT32 volume.</li>
+<li><strong>Does it play plain, unencrypted audio files</strong> (normally MP3) that you drop into folders — rather than a locked or encrypted container built by the maker's own software?</li>
+<li><strong>Does it play in a predictable order</strong> — either by name-sort or by copy order — so that numbered folders and tracks come out in sequence?</li>
 </ol>
 
-<div class="callout info">
-  <strong>Sealed player, removable card?</strong> Many players have factory-sealed internal memory
-  you cannot touch <em>and</em> a removable microSD card. In that case you load the <em>card</em>, not
-  the player: pull the card, put it in a USB card reader, and run the tool against the card. A
-  standalone reader is best — then only the one clean card volume mounts and you cannot erase the
-  wrong thing.
-</div>
+<div class="callout info"><strong>Sealed player with a removable card?</strong> If a player is factory-sealed but has a card you can take out, you load it <em>via the card</em>: pull the card, load it in a USB card reader, and return it. The player never has to mount at all.</div>
 
-<div class="callout warn">
-  <strong>Always test one device first.</strong> Load a single card or player, put it in the actual
-  player, and confirm it plays in the right order before you run a batch. Several details below are
-  marked unverified precisely because they can only be settled by testing one real unit.
-</div>
+<div class="callout warn"><strong>The one genuine hard limit.</strong> If a player exposes <em>no</em> removable card <em>and</em> <em>no</em> USB drive/disk mode, a drive-based loader has nothing to write to. Those players load only with the maker's own software over the maker's own cable. That is the single case this tool cannot help with directly — everything else is a matter of getting the source folder right.</div>
 
 <h2>Player families</h2>
 
-<h3>Hope Tech Global — KULUMI (X, Mini, Sheep)</h3>
+<h3>KULUMI (Hope Tech Global)</h3>
 
-<p>Low-cost solar audio players sold in bulk to Bible-translation ministries. This tool's whole
-workflow is modeled on Hope Tech Global's own <code>HTGv4.CMD</code> Windows loader, which loads a
-plain FAT32 volume in copy order.</p>
+<p>Low-cost solar audio players — the family this tool's workflow is modeled on (Hope Tech Global's own <code>HTGv4.CMD</code> loader). Loading a KULUMI is a plain file copy in the right order onto a FAT32 volume.</p>
 
 <table>
-  <tr><th>Item</th><th>Detail</th></tr>
-  <tr><td>Loads via</td><td>KULUMI Mini (open-slot variant): <strong>removable microSD in a USB card
-  reader</strong> — the clean, recommended path. KULUMI X and Sheep: USB drive mode over Hope Tech
-  Global's cable (no removable card).</td></tr>
-  <tr><td>Cable / hardware</td><td>A <strong>proprietary green or red DATA cable</strong> from Hope
-  Tech Global — <em>not</em> the black charge cable, and not a generic USB cable. A charge-only cable
-  will charge the device but will not mount it. For the Mini, a standard USB microSD card reader
-  instead.</td></tr>
-  <tr><td>Filesystem</td><td>FAT32 (the KULUMI program page: "use the default format: FAT32").</td></tr>
-  <tr><td>Folder structure</td><td>KULUMI X and Mini: <strong>3 levels</strong> — content category
-  &rarr; title/album &rarr; MP3 files. KULUMI Sheep: <strong>2 levels</strong> — title/album &rarr;
-  MP3 files. Build your source tree to match the specific model.</td></tr>
-  <tr><td>Filename convention</td><td>Number folders and files with leading zeros (<code>001</code>,
-  <code>002</code>, …) so they land in the right order. This is required by the copy-order playback
-  behavior, not by a documented filename rule. Plain ASCII names.</td></tr>
-  <tr><td>Audio format</td><td>MP3. No published bitrate ceiling — treat any hard bitrate limit as
-  unverified; confirm with the manufacturer.</td></tr>
-  <tr><td>Works with this tool</td><td><strong>KULUMI Mini (open-slot, via the card):</strong> yes —
-  this is the confirmed-workable path. <strong>KULUMI X:</strong> likely, but test first. <strong>KULUMI
-  Sheep:</strong> unknown on Mac — needs its cable AND a confirmed Mac mount.</td></tr>
+<tr><th>&nbsp;</th><th>KULUMI Mini</th><th>KULUMI X</th><th>KULUMI Sheep</th></tr>
+<tr><td>What it is</td><td>Solar lamp + audio player + FM + phone charger</td><td>Pocket solar player (IP65)</td><td>Audio player in a plush sheep (for children)</td></tr>
+<tr><td>Loads via</td><td>Removable microSD in a USB card reader (open-slot version) <em>or</em> the cable</td><td>USB drive mode over the cable (no removable card)</td><td>USB drive mode over the cable (no removable card)</td></tr>
+<tr><td>Cable / hardware</td><td>Standard USB microSD reader (easiest), or Hope Tech Global's proprietary <strong>green or red</strong> data cable</td><td>Hope Tech Global's proprietary <strong>green or red</strong> data cable</td><td>Hope Tech Global's <strong>special programming cable</strong> (a normal cable shows nothing)</td></tr>
+<tr><td>Filesystem</td><td>FAT32</td><td>FAT32</td><td>FAT32</td></tr>
+<tr><td>Folder structure</td><td>3 levels: category → title/album → MP3</td><td>3 levels: category → title/album → MP3</td><td>2 levels: title/album → MP3 (shallower)</td></tr>
+<tr><td>Filenames</td><td>Numbered with leading zeros (001, 002…) so they sort in play order; plain ASCII</td><td>Numbered with leading zeros; plain ASCII</td><td>Numbered with leading zeros; plain ASCII</td></tr>
+<tr><td>Audio format</td><td>MP3</td><td>MP3</td><td>MP3</td></tr>
+<tr><td>Verdict</td><td><strong>Tested &amp; verified</strong></td><td>Not yet tested — expected to work</td><td>Not yet tested — expected to work</td></tr>
 </table>
 
-<div class="callout warn">
-  <strong>The key uncertainty (KULUMI X and Sheep):</strong> Hope Tech Global documents loading only
-  on Windows (Kulumi Scripts) or on a Mac via Wine/CrossOver (SaberCopy). No manufacturer source
-  confirms that the X or Sheep mount as a writable USB disk under native macOS over the proprietary
-  cable. They use FAT32 internal memory, so it is plausible — but <em>reported, not confirmed</em>.
-  Test one unit end-to-end on your Mac before committing to a batch. Neither the X nor the Sheep has a
-  removable card, so there is no card-reader fallback if the mount does not work.
-</div>
+<div class="callout"><strong>KULUMI Mini — confirmed working with this tool.</strong> The developer has tested and verified it. It loads over Hope Tech Global's <strong>red</strong> data cable as well as the green. Some Mini variants have a removable microSD card and some do not, but <strong>all variants load via the cable</strong>. The cleanest path is the open-slot version: pull the microSD, load it in a card reader, return it — no special cable needed.</div>
+
+<div class="callout info"><strong>Why the KULUMI folder order matters.</strong> Hope Tech Global's own loader notes that a KULUMI "plays back in the order that it was copied in" — copy order, not a firmware name-sort. That is exactly what this tool guarantees: it lays your files down onto a fresh volume in sorted name order, so copy order and play order match. Number your folders and tracks with leading zeros.</div>
 
 <ul>
-  <li><strong>KULUMI Mini variants:</strong> the open-slot version (card swappable) is the easy win;
-  the enclosed-slot version behaves like the X (proprietary-cable path only). Confirm which you have
-  before buying cables.</li>
-  <li><strong>Locked / write-protected cards:</strong> KULUMI cards can be hardware-locked with
-  anti-tamper tooling. A locked card is read-only; this tool detects the write-protect and skips it.
-  Use an unlocked card.</li>
-  <li><strong>KULUMI X storage is disputed:</strong> the manufacturer calls it "internal 8GB memory,"
-  an independent SIL review calls it an "enclosed 8GB microSD." Either way it is not user-removable, so
-  the loading path is the same.</li>
+<li><strong>KULUMI X:</strong> ~8 GB fixed storage (the maker calls it internal memory; an independent SIL review calls it an enclosed microSD — either way it is not user-removable, so there is no card-reader fallback). It should present as a FAT32 drive over the green/red data cable; confirm your first unit mounts writable on your Mac before a batch.</li>
+<li><strong>KULUMI Mini:</strong> cards can be hardware <strong>write-locked</strong> as an anti-tamper measure. A locked card is read-only and this tool will skip it — use an <em>unlocked</em> card in the open slot.</li>
+<li><strong>KULUMI Sheep:</strong> requires the special programming cable; a normal or charge-only cable exposes nothing. It has no removable card, so the cable is the only path. Confirm it mounts writable on your Mac with that cable before committing a batch.</li>
 </ul>
 
-<p><strong>Loading / programming documentation:</strong>
-<a href="https://kulumi.org/program/">kulumi.org/program</a> (official loading guide),
-<a href="https://kulumi.org/kulumi-x/">KULUMI X</a>,
-<a href="https://kulumi.org/kulumi-mini/">KULUMI Mini</a>,
-<a href="https://kulumi.org/kulumi-sheep/">KULUMI Sheep</a>.</p>
+<p><strong>Loading / programming documentation:</strong> <a href="https://kulumi.org/program/">kulumi.org/program</a> (official loading guide, folder structure, FAT32 formatting), plus per-model pages <a href="https://kulumi.org/kulumi-mini/">Mini</a>, <a href="https://kulumi.org/kulumi-x/">X</a>, <a href="https://kulumi.org/kulumi-sheep/">Sheep</a>.</p>
 
 <h3>MegaVoice</h3>
 
-<p>Solar/rechargeable audio Bible players. The critical fact: MegaVoice players' <strong>internal
-memory is not a plain USB drive</strong> — it is reachable only through MegaVoice's proprietary SLS
-cable plus their SaberCopy software. This tool cannot load internal memory. Where a MegaVoice player
-has a <em>removable microSD card</em>, that card is a plain FAT32 volume and the tool loads it fine.</p>
+<p>Solar/rechargeable audio-Bible players used widely in missions. MegaVoice's own loading path is their proprietary <strong>SLS cable</strong> plus <strong>SaberCopy</strong> software, which writes the player's internal memory. This tool is <em>not yet tested</em> with MegaVoice but is expected to work — most straightforwardly through the removable microSD on the card-based models.</p>
 
 <table>
-  <tr><th>Item</th><th>Detail</th></tr>
-  <tr><td>Loads via</td><td><strong>Removable microSD in a USB card reader</strong> on models that
-  have a card slot (Companion, Shield, Herald). The internal flash of every model (including Envoy 2 S
-  / E) loads only via SLS + SaberCopy and is <em>out of scope</em> for this tool.</td></tr>
-  <tr><td>Cable / hardware</td><td>For the card path: a standard USB microSD card reader (recommended)
-  or a data cable to the player's own reader. For internal memory: the proprietary MegaVoice SLS cable
-  (available only from MegaVoice) — this tool does not use that path.</td></tr>
-  <tr><td>Filesystem</td><td>microSD must be FAT32 ("cards should be formatted as FAT32 for use in any
-  MegaVoice player that has a microSD card reader").</td></tr>
-  <tr><td>Folder structure</td><td>Four levels: Channel &rarr; Section &rarr; Book &rarr; Chapter
-  (audio files). Channel and Section folders need a <strong>3-digit numeric prefix</strong>
-  (<code>001</code>, <code>002</code>, …); free-form text may follow (e.g. <code>001-English</code>).
-  No empty primary folders.</td></tr>
-  <tr><td>Filename convention</td><td>3-digit prefixes on folders; audio files must sort in intended
-  play order. A 3-digit prefix on files too guarantees correct order.</td></tr>
-  <tr><td>Audio format</td><td>Broad on card-based models (AAC-LC, FLAC, MP3, OGG, WAV, WMA and
-  others); <strong>DRM-protected files are not supported</strong>. No hard bitrate limit published —
-  unverified.</td></tr>
-  <tr><td>Works with this tool</td><td><strong>Companion, Shield, Herald — via the microSD card:</strong>
-  yes. <strong>Envoy 2 S / E internal memory:</strong> no (SLS + SaberCopy only).
-  <strong>Envision:</strong> no — see below. <strong>Factory-sealed/pre-loaded units:</strong> no
-  (unless a specific unit has a user-accessible microSD, in which case treat it like Companion).</td></tr>
+<tr><th>Model</th><th>Loads via</th><th>Notes</th></tr>
+<tr><td>Companion / Shield</td><td>Removable microSD in a card reader (plain file copy)</td><td>Internal memory needs the SLS cable + SaberCopy; the <strong>card</strong> is plain FAT32 and the natural path for this tool.</td></tr>
+<tr><td>Herald</td><td>Removable microSD in a card reader</td><td>Same two-path model as Companion. Load the card, not the internal flash.</td></tr>
+<tr><td>Envoy 2 (S / E series)</td><td>Internal flash only — via SLS cable + SaberCopy</td><td>Standard Envoy 2 models have no removable card, so no removable storage is exposed to a drive loader; load these with SaberCopy. Not yet tested — expected to work if a given unit has a card.</td></tr>
+<tr><td>Envision</td><td>Removable microSD, but <strong>encrypted files only</strong></td><td>Its card mounts, but it plays only MegaVoice-encrypted files; plainly-copied MP3s are ignored. Load with MegaVoice's Windows encryptor / SaberCopy.</td></tr>
 </table>
-
-<div class="callout warn">
-  <strong>Envision is a trap.</strong> The Envision's removable microSD mounts fine, but it accepts
-  <strong>encrypted files only</strong> — plainly-copied MP3s are skipped and ignored by the player.
-  The encryptor is a MegaVoice Windows-only program. A plain copy from this tool will not play. Do not
-  treat "has a removable card" as "compatible" for the Envision.
-</div>
 
 <ul>
-  <li><strong>Herald caveats (medium confidence):</strong> its exact per-level folder maxima and full
-  codec list were not re-verified line by line — confirm in the Herald guide. The FAT32-card loading
-  path is the same as the Companion.</li>
-  <li><strong>Don't erase the wrong volume:</strong> when a Companion or Herald is plugged in, both its
-  onboard memory and its card reader can appear as volumes. Use a standalone card reader so only the
-  card mounts, and identify it carefully before erasing.</li>
-  <li><strong>SaberCopy fallback is Windows-oriented:</strong> if you ever need internal memory, note
-  SaberCopy on Mac needs "additional setup" and has historically been Intel-only — a problem on Apple
-  Silicon. This tool's card path avoids that entirely.</li>
+<li><strong>Filesystem:</strong> the microSD must be <strong>FAT32</strong> for any MegaVoice player with a card reader. exFAT is not indicated.</li>
+<li><strong>Folder structure:</strong> four levels — Channel → Section → Book → Chapter (audio files). Channel and Section folders need a <strong>3-digit numeric prefix</strong> (e.g. <code>001</code>, or <code>001-English</code>); no empty primary folders.</li>
+<li><strong>Filenames:</strong> 3-digit numeric prefixes so everything sorts in play order; free text may follow the prefix.</li>
+<li><strong>Audio format:</strong> MP3/WAV/WMA on the older players; the Companion additionally accepts AAC-LC, FLAC, OGG and others. DRM-protected files are not supported. No hard bitrate cap is published — confirm with MegaVoice if you need an exact number.</li>
+<li><strong>Play order:</strong> name-sort — "the names of all folders and audio files must sort in the order they should be played." A 3-digit prefix guarantees it, and this tool's sorted copy satisfies it.</li>
 </ul>
 
-<p><strong>Loading / programming documentation:</strong>
-<a href="https://megavoice.com/pdf/Companion%20and%20Shield%20User%20Guide%2020191217-32.pdf">Companion & Shield User Guide (PDF)</a>,
-<a href="https://megavoice.com/formatting-audio-bible/">Formatting an audio Bible</a>,
-<a href="https://megavoice.com/audio-cloud/how-to-guide-for-loading-audio-content-on-audio-bibles/">How-to guide for loading content</a>.</p>
+<div class="callout warn"><strong>Card-reader tip.</strong> When you load the card <em>inside</em> the player, both the onboard memory and the card can appear as volumes — it is easy to erase the wrong one. Prefer a standalone USB card reader so only the card mounts. The <strong>Envision is the exception</strong>: its card requires encrypted files, so a plain MP3 copy will be ignored — use MegaVoice's own tooling for it.</div>
 
-<h3>Renew World Outreach — The Torch and microSD players</h3>
+<p><strong>Loading / programming documentation:</strong> <a href="https://megavoice.com/audio-cloud/how-to-guide-for-loading-audio-content-on-audio-bibles/">MegaVoice how-to guide for loading audio content</a>, the <a href="https://megavoice.com/pdf/Companion%20and%20Shield%20User%20Guide%2020191217-32.pdf">Companion &amp; Shield User Guide (PDF)</a>, and <a href="https://megavoice.com/formatting-audio-bible/">formatting guidance</a>.</p>
 
-<p>Solar audio Bible players (The Torch, Papyrus). "The Torch" is a Renew product — do not confuse it
-with the Davar/Kivah Audibible. The Torch's internal memory is <em>not</em> a good match for this
-tool; some Renew players take a removable microSD, which is.</p>
+<h3>Renew World Outreach — The Torch</h3>
 
-<table>
-  <tr><th>Item</th><th>Detail</th></tr>
-  <tr><td>Loads via</td><td><strong>The Torch:</strong> 8&nbsp;GB internal flash only, <em>no card
-  slot</em> — loaded over a special proprietary USB cable with SaberCopy. <strong>Renew microSD
-  players (e.g. Papyrus):</strong> the removable microSD in a USB card reader.</td></tr>
-  <tr><td>Cable / hardware</td><td>The Torch needs Renew's special proprietary USB cable (easily lost;
-  the USB <em>output</em> port is charge-only, not a loading port). The microSD path needs a standard
-  USB card reader.</td></tr>
-  <tr><td>Filesystem</td><td>The Torch's on-device filesystem is <strong>not documented</strong> —
-  unverified; do not assume FAT32. The microSD path is FAT32 by default (also stated as unverified vs.
-  exFAT — FAT32 is the safe default).</td></tr>
-  <tr><td>Folder structure</td><td>Folder-per-book / numbered folders. Renew guidance for the microSD
-  path: Channel, Section and Book folders each renamed with 3-digit consecutive numbers (<code>001</code>,
-  <code>002</code>, …). Exact depth/limits for the Torch's internal memory are unverified.</td></tr>
-  <tr><td>Filename convention</td><td>3-digit consecutive numbering on folders and files. Leading-zero
-  numbering for the Torch internal memory is prudent but not confirmed.</td></tr>
-  <tr><td>Audio format</td><td>MP3. Bitrate and any other-format support are unverified — confirm with
-  Renew.</td></tr>
-  <tr><td>Works with this tool</td><td><strong>The Torch:</strong> no — no removable card, and its
-  vendor-configured internal filesystem should not be blindly reformatted by a generic disk tool.
-  <strong>Renew microSD players — via the card:</strong> workable (medium confidence), when the card is
-  unlocked.</td></tr>
-</table>
-
-<div class="callout warn">
-  <strong>Do not reformat the Torch with this tool.</strong> The Torch does expose a drive letter over
-  its proprietary cable, but this tool wipes and re-creates a fresh FAT32 volume — and the Torch's
-  internal partition/filesystem is undocumented and vendor-configured. Reformatting it could leave a
-  unit its own firmware can't read. Load the Torch with SaberCopy on Windows over its proprietary
-  cable; only consider this tool after Renew confirms the on-device filesystem and you have
-  test-loaded and played one real unit.
-</div>
+<p>A solar audio-Bible player with flashlight, lantern, FM radio, and a phone-charging port. <strong>8 GB internal flash only — no card slot.</strong> (Do not confuse it with Renew's <em>Papyrus</em>, a different Renew player that does have a microSD option.)</p>
 
 <ul>
-  <li><strong>Card write-lock gotcha:</strong> on the microSD path, if the card's hardware lock switch
-  is set, content cannot be deleted or added. Slide it to unlocked first (the tool skips hardware-locked
-  cards).</li>
-  <li><strong>SaberCopy is Windows-only</strong> (Windows 8.x/10; Mac needs a VM or Wine), so on a
-  Mac-only workflow neither the intended loader nor a verified reformat path is available for the
-  Torch's internal memory.</li>
+<li><strong>Loads via:</strong> USB drive mode — it appears as a drive letter — but only over Renew's <strong>special proprietary USB cable</strong>. An ordinary or charge-only cable will not mount it, and it has no removable card, so there is no card-reader fallback.</li>
+<li><strong>Cable / hardware:</strong> Renew's proprietary Torch loading cable (easily lost — the separate USB port on the device is a charge-<em>out</em> port for phones, not a loading port).</li>
+<li><strong>Filesystem:</strong> not published — <em>unverified</em>. The Torch ships vendor-configured, so confirm the on-device filesystem with Renew before reformatting it, rather than assuming FAT32.</li>
+<li><strong>Folder structure:</strong> folder-per-book, shallow (the firmware navigates chapter / book / collection). Exact naming and depth rules are <em>not documented publicly</em> — confirm with Renew.</li>
+<li><strong>Audio format:</strong> MP3. Bitrate and any other-format support are <em>unverified</em>.</li>
+<li><strong>Play order:</strong> not documented — <em>unverified</em> whether it is copy order or name-sort. Test one unit and listen before trusting a batch.</li>
 </ul>
 
-<p><strong>Loading / programming documentation:</strong>
-<a href="https://renewoutreach.org/torch-audio-bible/">The Torch (manufacturer page)</a>,
-<a href="https://renewoutreach.org/equipment/microsd/">Renew microSD equipment</a>. Detailed loading
-tutorials sit behind a login — confirm the current procedure and on-device filesystem with Renew World
-Outreach before relying on this tool for any Renew device.</p>
+<div class="callout warn"><strong>Not yet tested — proceed carefully.</strong> The Torch's internal filesystem is undocumented, and this tool reformats to a fresh FAT32 volume. Because a wrong reformat could leave a unit its own firmware can't read, confirm the on-device filesystem with Renew and test-load one real unit before running a batch. Renew's own documented path is SaberCopy on Windows over the proprietary cable.</div>
 
-<h3>Global Recordings Network — Saber</h3>
+<p><strong>Loading / programming documentation:</strong> <a href="https://renewoutreach.org/torch-audio-bible/">renewoutreach.org — Torch Audio Bible</a> (detailed loading tutorials are behind a login; confirm the current procedure with Renew at <code>info@renewoutreach.com</code>). For Renew's microSD-based players, see <a href="https://renewoutreach.org/equipment/microsd/">renewoutreach.org — microSD</a> — those load via the removable card in a reader (unlock the card's write-lock switch first).</p>
 
-<p>The hand-wind MP3 player this tool's copy method is indirectly named for (via "SaberCopy").</p>
+<h3>Faith Comes By Hearing (FCBH) — Proclaimer, BibleStick, Micro Proclaimer</h3>
 
-<table>
-  <tr><th>Item</th><th>Detail</th></tr>
-  <tr><td>Loads via</td><td>Its built-in USB port (GRN: loading is "as simply as connecting a USB
-  cable to your computer and copying across MP3 files") or its SD card in a reader.</td></tr>
-  <tr><td>Cable / hardware</td><td>A standard USB cable and/or an SD card reader. No proprietary cable
-  indicated for the Saber.</td></tr>
-  <tr><td>Filesystem</td><td>FAT (FAT16/FAT32 for its small 1&nbsp;GB internal / 2&nbsp;GB card
-  media). Exact filesystem not published — verify the mounted volume; small media may format FAT16
-  rather than FAT32.</td></tr>
-  <tr><td>Folder structure</td><td>Numbered folder hierarchy (SaberCopy-style). Exact required
-  top-folder names are not documented — treat as unverified.</td></tr>
-  <tr><td>Filename convention</td><td>Ordered folders; specific numbering rules unverified for the
-  Saber specifically. Use leading-zero numbering to be safe.</td></tr>
-  <tr><td>Audio format</td><td>MP3 and WMA.</td></tr>
-  <tr><td>Works with this tool</td><td>Likely, for existing units — the USB or SD path mounts as mass
-  storage. But GRN has <strong>discontinued</strong> the Saber, so you are unlikely to be provisioning
-  new ones.</td></tr>
-</table>
+<p>FCBH's Proclaimer family (S100 / S50 / S25 / E10), the BibleStick, and the Micro Proclaimer are <strong>factory-loaded by FCBH before shipment.</strong> Per FCBH and the independent SIL review, "you cannot change the content on the Proclaimer. It will only read memory cards that have been pre-loaded with audio Scriptures by FCBH."</p>
 
-<p><strong>Loading / programming documentation:</strong>
-<a href="https://globalrecordings.net/en/saber-how-to-use">Saber — how to use</a>,
-<a href="https://globalrecordings.net/en/saber">Saber overview</a>.</p>
+<ul>
+<li><strong>Removable storage:</strong> none exposed to you. The USB-C port charges only; any microSD slot reads only FCBH's own pre-loaded cards, not a card you write.</li>
+<li><strong>What this means:</strong> no removable storage is exposed, so there is nothing for this tool to write to. Load these through FCBH's program — order them pre-loaded in the language you need.</li>
+</ul>
 
-<h3>Faith Comes By Hearing — Proclaimers, BibleStick, Micro Proclaimer</h3>
+<div class="callout info"><strong>Where the tool still helps:</strong> a <em>blank</em> consumer microSD card (not an FCBH pre-loaded one) destined for a generic phone or a plain-FAT32 third-party player is exactly what this tool writes well. It just can't feed FCBH's own players. Never wipe an FCBH pre-loaded card.</div>
 
-<p>FCBH's own playback devices are a <strong>closed, factory-loaded ecosystem</strong>. None of them
-can be loaded with this tool.</p>
+<p><strong>Loading / programming documentation:</strong> No user loading guide exists — these are provisioned by Faith Comes By Hearing. See the <a href="https://www.faithcomesbyhearing.com/audio-bible-resources/partner-resources">FCBH partner resources</a> to obtain pre-loaded devices, and confirm any specifics with FCBH directly.</p>
 
-<table>
-  <tr><th>Item</th><th>Detail</th></tr>
-  <tr><td>Loads via</td><td>Nothing user-writable. FCBH installs the content before shipping. The SIL
-  review states plainly: "you cannot change the content on the Proclaimer. It will only read memory
-  cards that have been pre-loaded with audio Scriptures by FCBH."</td></tr>
-  <tr><td>Cable / hardware</td><td>USB-C (or micro-USB on older units) for <strong>charging
-  only</strong> — not a data/loading port. No user programming cable exists. The BibleStick runs on a
-  single AAA battery with no documented data port at all.</td></tr>
-  <tr><td>Filesystem / structure / filenames</td><td>FCBH-controlled and not published — not
-  applicable to end users, because there is no user-writable volume.</td></tr>
-  <tr><td>Audio format</td><td>MP3 (FCBH's recordings), but factory-prepared; on-device bitrate is
-  unverified and moot for loading.</td></tr>
-  <tr><td>Works with this tool</td><td><strong>No</strong> — for every FCBH device (Proclaimer
-  S100/S50/S25/E10, BibleStick, Micro Proclaimer). They never present writable USB mass storage. Order
-  them pre-loaded in the language you need from FCBH.</td></tr>
-</table>
+<h3>GRN Saber (Global Recordings Network)</h3>
 
-<div class="callout info">
-  <strong>One narrow exception, and it is not an FCBH player.</strong> If you have <em>blank</em>
-  consumer microSD cards destined for a generic phone or a plain-FAT32 third-party player, this tool
-  formats and loads those cards correctly. But a Proclaimer will only play FCBH-authored cards, and a
-  pre-loaded FCBH card should never be wiped. This tool feeds generic players, not FCBH's own.
-</div>
+<p>A hand-wind MP3 player with 1 GB internal memory plus an SD-card slot (SD up to 2 GB). GRN describes loading it as "simply connecting a USB cable to your computer and copying across MP3 files" — no proprietary cable indicated.</p>
 
-<p><strong>Loading / programming documentation:</strong> No official user loading guide exists — FCBH
-devices are not user-loadable. Order pre-loaded content via
-<a href="https://www.faithcomesbyhearing.com/audio-bible-resources/partner-resources">FCBH partner resources</a>.</p>
+<ul>
+<li><strong>Loads via:</strong> USB drive mode over a standard USB cable, or via the SD card in a reader.</li>
+<li><strong>Filesystem:</strong> FAT (the small 1–2 GB media may format FAT16 rather than FAT32 — check the mounted volume before relying on it).</li>
+<li><strong>Audio format:</strong> MP3 and WMA.</li>
+<li><strong>Play order:</strong> order-sensitive (this is the player SaberCopy was named for); a sorted copy satisfies it.</li>
+<li><strong>Verdict:</strong> Not yet tested — expected to work. Note GRN has <strong>discontinued</strong> the Saber, so you are unlikely to be provisioning new units; existing units should load fine over USB or via the SD card.</li>
+</ul>
 
-<h3>Kivah / Davar — Audibible K1</h3>
+<p><strong>Loading / programming documentation:</strong> <a href="https://globalrecordings.net/en/saber-how-to-use">globalrecordings.net — Saber how to use</a> and <a href="https://globalrecordings.net/en/sabercopy">SaberCopy</a>.</p>
 
-<p>A player with a removable microSD card that is nonetheless <strong>not</strong> loadable with this
-tool.</p>
+<h3>Generic FAT MP3 players, USB/SD radios &amp; speakers</h3>
 
-<table>
-  <tr><th>Item</th><th>Detail</th></tr>
-  <tr><td>Loads via</td><td>Its removable microSD mounts in a card reader as mass storage — but the
-  audio must be in an <strong>encrypted, password-generated proprietary container</strong> produced by
-  Kivah's own software.</td></tr>
-  <tr><td>Cable / hardware</td><td>A standard USB microSD reader reaches the card, but you also need
-  Kivah's proprietary encryption software.</td></tr>
-  <tr><td>Filesystem / structure / filenames</td><td>Determined by Kivah's software, not by you.</td></tr>
-  <tr><td>Audio format</td><td>Encrypted proprietary format — <strong>not plain MP3</strong>.</td></tr>
-  <tr><td>Works with this tool</td><td><strong>No.</strong> A removable card alone does not make a
-  player compatible: plain MP3s copied by this tool will not play. Use Kivah/Davar's own tooling.</td></tr>
-</table>
+<p>Cheap, locally-available players that read directly from a microSD card or a USB thumb drive you insert. This is the tool's sweet spot: any card or stick that mounts as a writable FAT32 volume loads cleanly.</p>
 
-<p><strong>Loading / programming documentation:</strong>
-<a href="https://www.kivah.co.za">kivah.co.za</a> — obtain and use Kivah's own encryption software for
-the Audibible.</p>
+<ul>
+<li><strong>Loads via:</strong> the removable microSD in a USB reader, or the USB stick itself.</li>
+<li><strong>Filesystem:</strong> FAT32 is near-universal. Some large cards ship exFAT and a minimal player may reject it — the tool reformats to FAT32, which resolves that.</li>
+<li><strong>Folder structure &amp; filenames:</strong> firmware-dependent (often flat or shallow). Match your source tree to what your specific player expects; leading-zero numbering (001, 002…) is the safe cross-device convention.</li>
+<li><strong>Audio format:</strong> usually MP3; codec support varies by chipset.</li>
+<li><strong>Verdict:</strong> Not yet tested per unit — expected to work. Caveats: some players choke on deep nesting or on many files per folder, and full-size SD adapters have a write-lock switch that must be unlocked. Test one unit first.</li>
+</ul>
 
-<h3>Generic FAT MP3 players (cards, sticks, cheap radios/speakers)</h3>
-
-<p>Any locally-bought MP3 player, speaker, or radio that reads a microSD card or a USB stick you insert.
-This is the tool's <strong>sweet spot</strong>.</p>
-
-<table>
-  <tr><th>Item</th><th>Detail</th></tr>
-  <tr><td>Loads via</td><td>The removable microSD/SD card in a USB reader, or the USB stick itself —
-  a standard writable mass-storage volume.</td></tr>
-  <tr><td>Cable / hardware</td><td>A standard USB card reader, or the stick itself. No proprietary
-  cable.</td></tr>
-  <tr><td>Filesystem</td><td>FAT32 is near-universal on these and is what the tool writes. Large cards
-  sometimes ship exFAT and a minimal player may reject it — this tool reformats to FAT32.</td></tr>
-  <tr><td>Folder structure</td><td>Firmware-dependent, often flat or shallow. Match your source tree
-  to your specific player; the tool imposes no layout.</td></tr>
-  <tr><td>Filename convention</td><td>Leading-zero numbering (<code>001</code>, <code>002</code>, …)
-  is the safe cross-device convention. Many cheap players sort by copy order (which this tool controls);
-  some sort by name — leading zeros satisfy both.</td></tr>
-  <tr><td>Audio format</td><td>MP3 (sometimes WAV). Codec/bitrate support varies by chipset —
-  unverified per unit.</td></tr>
-  <tr><td>Works with this tool</td><td>Likely — any card or stick that mounts as writable FAT32 works.
-  Confirm your specific player reads FAT32, watch for players that choke on nested folders or too many
-  files per folder, and unlock any full-size SD adapter's write-lock switch.</td></tr>
-</table>
-
-<p><strong>Loading / programming documentation:</strong> No single manufacturer applies. For a broad
-comparison of mission audio players and how each loads, see the SIL / Scripture Engagement review
-<a href="https://scripture-engagement.org/wp-content/uploads/2019/11/Margetts-R-2024-Which-Audio-Player-2024-05-25.pdf">"Which Audio Player?" (Margetts, 2024, PDF)</a>.</p>
+<p><strong>Loading / programming documentation:</strong> No single official guide exists across generic players — consult the leaflet for your specific device, and see the SIL/Scripture-Engagement review <a href="https://scripture-engagement.org/wp-content/uploads/2019/11/Margetts-R-2024-Which-Audio-Player-2024-05-25.pdf">"Which Audio Player?" (Margetts, 2024)</a> for a broad comparison.</p>
 
 <h2>General guidance for any player</h2>
 
-<p>Whatever the player, structure your source folder like this before running the tool:</p>
+<p>Whatever the family, the same source-folder discipline makes a player behave. When in doubt, follow these and test one device.</p>
 
 <ol>
-  <li><strong>Number your top-level folders:</strong> <code>001-…</code>, <code>002-…</code>,
-  <code>003-…</code>, one per unit of content, in the order you want them played.</li>
-  <li><strong>Number your tracks with leading zeros</strong> inside each folder:
-  <code>01</code>, <code>02</code>, … <code>10</code>, <code>11</code> — so that <code>10</code> does
-  not sort before <code>2</code>.</li>
-  <li><strong>Use one audio format the device supports</strong> — usually MP3. Don't mix in formats a
-  cheap player might not decode.</li>
-  <li><strong>Keep the nesting shallow.</strong> Match the depth your specific player expects (2 levels
-  for the KULUMI Sheep, 3 for the KULUMI X/Mini, 4 for card-based MegaVoice); deeper or more elaborate
-  trees confuse minimal firmware.</li>
-  <li><strong>Test one loaded device in the actual player before you run a batch.</strong> Confirm it
-  powers on, finds the content, and plays in the order you intended. Only then load the rest.</li>
+<li><strong>Number your top-level folders</strong> with leading zeros: <code>001 Genesis</code>, <code>002 Exodus</code>, <code>003 Leviticus</code>… so <code>010</code> does not sort before <code>002</code>.</li>
+<li><strong>Number the tracks inside each folder</strong> the same way, with leading zeros: <code>01</code>, <code>02</code>, … <code>10</code>, <code>11</code>.</li>
+<li><strong>Use one audio format your device supports</strong> — for almost every player that is <strong>MP3</strong>. Don't mix in formats the device may skip.</li>
+<li><strong>Keep the nesting shallow.</strong> Two or three levels is plenty; some players ignore or mishandle deep trees. Match the depth your specific family expects (KULUMI Sheep: 2 levels; KULUMI X/Mini and MegaVoice: 3–4).</li>
+<li><strong>Test one loaded device in the actual player before running a batch.</strong> Load a single unit, put it in the real player, and confirm the tracks play in the right order. Only then load the rest.</li>
 </ol>
 
-<div class="callout info">
-  <strong>Why the numbering matters:</strong> many of these players play in the order files were
-  <em>copied</em>, not a firmware name-sort. This tool copies your folders in sorted name order onto a
-  fresh volume, so numbered names with leading zeros are what put the tracks in the right sequence.
-</div>
+<div class="callout info">Numbered folders and leading-zero tracks cover both kinds of player — those that sort by name and those that play in copy order — because this tool copies your files onto a fresh volume in sorted name order, so the two orders line up.</div>
   </section>
 
   <footer>

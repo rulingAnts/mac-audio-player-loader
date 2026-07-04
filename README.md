@@ -49,7 +49,7 @@ Audio Player Loader is that native path. It uses **only what already ships on ev
 
 ## Requirements
 
-- **macOS** — any Mac. It is a plain shell script, not a compiled binary, so it is **universal**: it runs natively on both Apple Silicon and Intel Macs, with nothing to build or match to your CPU. Developed and tested on macOS 26 "Tahoe"; it uses only Apple-supplied tools and Apple's system `bash` (3.2).
+- **macOS** — any Mac. It is a plain shell script, not a compiled binary, so it is **universal**: it runs natively on both Apple Silicon and Intel Macs, with nothing to build or match to your CPU. Developed and tested on macOS 26 "Tahoe", it uses only long-standing Apple tools and the system `bash` (3.2), so it should run on **macOS 10.13 High Sierra (2017) or later** with high confidence (and very likely back to 10.9 Mavericks).
 - **A powered USB hub and the player devices** you want to load. A powered hub matters — bus power alone rarely drives many devices at once.
 - **Dependencies: none.** Nothing to install: no Homebrew, no third-party binaries, no downloads at runtime. No `sudo` and no root.
 
@@ -103,16 +103,20 @@ My Content Folder/
 
 ## Compatible players
 
-This loader is **player-agnostic**. It doesn't target any one brand — it just erases a USB disk (or a memory card in a reader), creates one clean full-size FAT32 volume, and copies your numbered folders onto it in play order. Whether a given player works comes down to four things:
+This loader is **player-agnostic**: it makes one clean, full-size FAT32 volume on each device you select and copies your numbered folders onto it in play order. It doesn't care what brand the player is — it cares that the player can read what it writes. The author is actively expanding the tested list; a player that isn't listed as tested will very likely still work once your source folder is set up the way that player expects. As a rule of thumb, this tool is expected to load essentially any device **SaberCopy** (the GRN/MegaVoice loader) can load.
 
-1. **It mounts as a writable USB disk, or its card does** — the player shows up on the Mac as an erasable drive, or it takes a removable microSD/SD card you can load in a USB card reader.
-2. **It reads FAT32** (what this tool writes).
-3. **It plays plain, unencrypted audio files** (normally MP3) organized in folders — no proprietary or encrypted container.
-4. **It plays in folder/track order** — either the copy order this tool writes or a name-sort your numbered folders satisfy.
+**Will my player work? — the four-point checklist:**
 
-Families researched so far: **Hope Tech Global / KULUMI** (X, Mini, Sheep), **MegaVoice** (Companion, Shield, Herald, Envoy 2, Envision), **Renew World Outreach** (The Torch and microSD players), **Global Recordings Network Saber**, **Faith Comes By Hearing** (Proclaimers, BibleStick, Micro Proclaimer), **Kivah / Davar Audibible**, and **generic FAT MP3 players / cards / sticks**.
+1. **Removable storage** — the player mounts as a USB drive, *or* it has a removable microSD/SD card you can load in a card reader.
+2. **FAT32** — it reads a FAT32 volume (nearly all simple players do).
+3. **Plain files** — it plays unencrypted audio (normally MP3) dropped into folders, not a locked container built by the maker's own software.
+4. **Predictable order** — it plays by name-sort or by copy order, so numbered folders and tracks come out in sequence.
 
-Not every family is loadable — several are factory-sealed (FCBH), encrypted (Envision, Audibible), or reachable only over a proprietary cable and vendor software (MegaVoice internal memory, Torch internal memory). See the operator guide's **Player-Specific Setup** tab for the per-device verdict, the exact source-folder structure and hardware each family needs, and links to each manufacturer's official loading/programming instructions.
+The one genuine hard limit: a player that exposes *no* removable card *and* *no* USB drive mode gives a drive-based loader nothing to write to — load those with the maker's own software.
+
+**Researched player families:** KULUMI / Hope Tech Global (Mini — **tested & verified**; X; Sheep), MegaVoice (Companion/Shield, Herald, Envoy 2, Envision), Renew World Outreach (The Torch), Faith Comes By Hearing (Proclaimer, BibleStick, Micro Proclaimer), GRN Saber, and generic FAT MP3 players / USB-SD radios.
+
+For per-device folder structure, cabling, filesystem, audio format, and links to each manufacturer's own loading documentation, see the **Player-Specific Setup** tab of the [operator guide](https://rulingants.github.io/mac-audio-player-loader/).
 
 ---
 
@@ -152,7 +156,7 @@ Loading is much faster than imaging a device with `dd` or Balena Etcher, for two
 - **Only the real files are copied.** `rsync` moves just your actual content — not a whole-disk image and its empty slack — and there is no read-back verification pass. Restoring an image typically writes the entire image *and reads it all back* to validate; copying the files skips both.
 - **Every device runs in parallel.** Erase and copy fan out across all devices at once, so total time is roughly the slowest single device, not the sum. (Spotlight indexing is also held off each freshly-mounted volume so it doesn't contend for the device's limited I/O mid-write.)
 
-In practice the remaining bottleneck is shared USB-hub bandwidth, not the Mac or the tool — spreading devices across multiple hubs on separate ports raises the ceiling further.
+In practice the remaining bottleneck is shared USB-hub bandwidth, not the Mac or the tool — spreading devices across multiple hubs on separate ports raises the ceiling further. Keeping your content on the Mac's internal SSD helps too: it reads far faster than any USB source device and never competes with the USB writes, so a USB-hosted source — even on a separate port — can itself become the bottleneck.
 
 ---
 

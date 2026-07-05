@@ -32,7 +32,7 @@
 # This script lives INSIDE the content folder (HTG-style, like HTGv4.CMD):
 # it copies everything in its own directory to each device, except itself
 # and its helper files (.app / .zip / .cmd / .txt / .md / .html and the
-# images/ folder — see RSYNC_EXCLUDES below for the authoritative list).
+# images/ folder — see PAYLOAD_PRUNE/PAYLOAD_SKIP below for the authoritative list).
 #
 # Junk handling, by mechanism:
 #   .DS_Store        -> Finder's .DS_Store-on-USB writing is suppressed for the
@@ -66,7 +66,7 @@
 #     · Pick & confirm ..... GUI (or text) selection + erase/keep confirmation
 #     · Erase   (parallel) . per disk: re-verify identity, then eraseDisk
 #     · Prepare ............ mount each fresh volume; verify it is ours
-#     · Copy    (parallel) . per device: rsync, scrub macOS junk, eject
+#     · Copy    (parallel) . per device: ordered copy, scrub macOS junk, eject
 #     · Progress ........... main loop polls status files -> progress bar
 #     · Results ............ bucket devices, relabel failures, print summary
 #     · Run again .......... offer to re-exec for the next batch
@@ -77,7 +77,7 @@
 #     $STATUS_DIR/diskN            first word is a CODE:  OK | CHECK | REDO
 #     $STATUS_DIR/diskN.erased     marker written when eraseDisk succeeded
 #     $STATUS_DIR/diskN.notloaded  device never reached the copy phase
-#     $STATUS_DIR/diskN.err        captured rsync stderr (for the message)
+#     $STATUS_DIR/diskN.err        captured copy stderr (for the message)
 #     $STATUS_DIR/.blink           flag file; blink loops run while it exists
 # $STATUS_DIR is deleted by an EXIT trap (and by hand before any re-exec).
 #
@@ -90,7 +90,7 @@
 # by a device-identity re-check, so a device that was unplugged or whose diskN
 # number got reused can never cause the wrong disk to be erased or the internal
 # drive to be written to. The three commands that touch disks are eraseDisk,
-# rsync, and the blink dd; each is guarded. Full rationale in TECHNICAL.html §5.
+# the copy loop's cp, and the blink dd; each is guarded. Full rationale in TECHNICAL.html §5.
 # ===========================================================================
 
 
@@ -302,16 +302,16 @@ done
 SRC="$(cd "$(dirname "$SELF_PATH")" && pwd)"
 SELF="$(basename "$SELF_PATH")"
 
-RSYNC_EXCLUDES=(
-  --exclude "/$SELF"
-  --exclude '*.app' --exclude '*.zip'
-  --exclude '*.cmd' --exclude '*.CMD'
-  --exclude '*.txt' --exclude '*.TXT'
-  --exclude '*.md' --exclude '*.html' --exclude '/images'
-  --exclude '._*' --exclude '.DS_Store' --exclude '.Spotlight-V100'
-  --exclude '.fseventsd' --exclude '.Trashes' --exclude '.TemporaryItems'
-  --exclude '.metadata_never_index'
-)
+# Single source of truth for WHAT gets copied: everything in $SRC except the
+# tool's own helper files and macOS junk. Used by BOTH the payload-size
+# measurement and the ordered copy loop, so the two can never drift apart.
+# PAYLOAD_PRUNE skips whole directory trees; PAYLOAD_SKIP filters names out.
+PAYLOAD_PRUNE=( \( -name '*.app' -o -name '.fseventsd' -o -name '.Spotlight-V100'
+                   -o -name '.Trashes' -o -name '.TemporaryItems' -o -path './images' \) -prune )
+PAYLOAD_SKIP=( ! -name "$SELF" ! -name '*.zip'
+               ! -name '*.cmd' ! -name '*.CMD' ! -name '*.txt' ! -name '*.TXT'
+               ! -name '*.md' ! -name '*.html'
+               ! -name '._*' ! -name '.DS_Store' ! -name '.metadata_never_index' )
 
 # --- Which PHYSICAL disks hold the source? Never erase those. ---------
 # df reports the mounted (possibly APFS-synthesized) device; walk it back
@@ -482,18 +482,14 @@ if [ -z "${DSUSB_ORIG+x}" ]; then
   export DSUSB_ORIG
 fi
 defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
-# NOTE: the SOURCE folder is deliberately left untouched — rsync's --exclude list
-# already keeps .DS_Store/._* from being copied, so there's no need to strip the
+# NOTE: the SOURCE folder is deliberately left untouched — the copy loop's
+# exclude filters keep .DS_Store/._* from being copied, so there's no need to strip the
 # source's own xattrs or delete files from it. The only per-device junk (._*
 # AppleDouble sidecars, synthesized on FAT) is scrubbed off each device, not here.
 
-# --- Payload size, measured the way rsync will actually copy it --------
-payload_b=$(cd "$SRC" && find . \( -name '*.app' -o -name '.fseventsd' -o -name '.Spotlight-V100' \
-    -o -name '.Trashes' -o -name '.TemporaryItems' -o -path './images' \) -prune -o \
-  -type f ! -name "$SELF" ! -name '*.zip' \
-  ! -name '*.cmd' ! -name '*.CMD' ! -name '*.txt' ! -name '*.TXT' \
-  ! -name '*.md' ! -name '*.html' \
-  ! -name '._*' ! -name '.DS_Store' -print0 |
+# --- Payload size, measured over the exact set the copy loop will write --
+payload_b=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \
+  -type f "${PAYLOAD_SKIP[@]}" -print0 |
   xargs -0 stat -f %z 2>/dev/null | awk '{s += $1} END {printf "%d", s}')
 total_k=$(((payload_b + 1023) / 1024))
 [ "$total_k" -gt 0 ] || total_k=1
@@ -607,7 +603,7 @@ grand_k=$((total_k * ${#copy_devs[@]}))
 [ "$grand_k" -gt 0 ] || grand_k=1
 
 # --- Copy phase (parallel) ---------------------------------------------
-# One background subshell per device: rsync the content, scrub macOS junk,
+# One background subshell per device: copy the content in sorted order, scrub macOS junk,
 # eject, and write a single OK/CHECK/REDO status file. The main PROGRESS loop
 # (further down) watches those files rather than waiting here, so it can draw a
 # live bar and detect stalls while the copies run.
@@ -626,10 +622,30 @@ for idx in "${!copy_devs[@]}"; do
     #   CHECK = content copied but something needs a human look
     #   REDO  = not loaded; retry this device
     ok_mount || { echo "REDO volume disappeared before copy" > "$STATUS_DIR/$dev"; exit 1; }
-    # rsync transfers its file list in sorted path order, so files land
-    # on the FAT in name order — same effect as a find|sort pipe
-    if rsync -rt "${RSYNC_EXCLUDES[@]}" "$SRC/" "$mp/" \
-         >/dev/null 2>"$STATUS_DIR/$dev.err" && ok_mount; then
+    # ORDERED COPY — the whole point of this tool. Create every folder and
+    # file with its FINAL name, in strict byte-sorted (LC_ALL=C) path order:
+    # FAT allocates directory entries in creation order, so the on-disk entry
+    # order IS the name-sorted order — which is the order minimal player
+    # firmware plays in. rsync must NOT be used here: Apple's openrsync
+    # writes each file under a ".name.XXXXXX" temp name and renames it, and
+    # on FAT every rename re-allocates the directory entry first-fit into
+    # slots freed by earlier temp entries — the final entry order comes out
+    # scrambled (observed on a real player 2026-07-06; reproduced from the
+    # same source folder and verified fixed by parsing the raw FAT tables).
+    # Parents precede children in sorted order, so plain mkdir suffices.
+    # cp -X skips xattr copying (the kernel still stamps provenance and
+    # synthesizes ._ sidecars — the scrub below removes those); touch -r
+    # preserves each file's modification time.
+    if ( cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \
+           \( -type f -o -type d \) "${PAYLOAD_SKIP[@]}" -print0 |
+         LC_ALL=C sort -z |
+         while IFS= read -r -d '' p; do
+           if [ -d "$p" ]; then
+             mkdir "$mp/$p" || exit 1
+           else
+             { cp -X "$p" "$mp/$p" && touch -r "$p" "$mp/$p"; } || exit 1
+           fi
+         done ) 2>"$STATUS_DIR/$dev.err" && ok_mount; then
       # Scrub the junk macOS forces onto FAT. On modern macOS ._* sidecars
       # are synthesized for any file carrying com.apple.provenance (which
       # xattr -cr can't strip), so they CANNOT be prevented — only removed.
@@ -672,7 +688,7 @@ done
 
 # --- PROGRESS: poll status files + df; draw bar; detect stalls ---------
 # The parent loops here while the copy subshells run. Progress is ESTIMATED
-# from each volume's `df` used-kB (rsync gives no per-device progress when run
+# from each volume's `df` used-kB (the copy gives no per-device progress when run
 # in parallel), summed across devices and divided by the expected grand total.
 # A device is "done" the instant its status file appears; its OK/CHECK/REDO
 # outcome is printed once, in colour. A device whose used-kB has not grown for
@@ -729,10 +745,10 @@ while :; do
       done_k=$((done_k + used))
     else
       # df no longer resolves this mount point to OUR device — the device was
-      # yanked or its volume vanished. rsync does NOT stop on its own: it keeps
+      # yanked or its volume vanished. The copy loop does NOT notice on its own: it keeps
       # creating the remaining files by path, and if macOS left /Volumes/<label>
       # behind as a plain folder, those writes land on the BOOT DISK. ok_mount
-      # only guards before/after rsync; this is the DURING guard. Two misses in
+      # only guards before/after the copy; this is the DURING guard. Two misses in
       # a row (~4 s) before acting, so one transient df hiccup can't kill a
       # healthy copy — safety still beats completion.
       gone_polls[idx]=$((gone_polls[idx] + 1))

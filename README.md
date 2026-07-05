@@ -26,7 +26,7 @@ The low-cost audio players used in field and ministry work — MegaVoice and sim
 
 Those Windows tools are not broken — they work fine, on Windows. The problem has simply been that there was no good **native macOS** way to do the same job. That is the gap this tool fills.
 
-Audio Player Loader is that native path. It uses **only what already ships on every Mac** — the built-in Terminal and bash, plus Apple's own `diskutil` and `rsync`. There is nothing to download, no emulation layer, and no Windows involved. Plug in a hub of devices, drag the script onto Terminal, and go. Parallels, CrossOver, and Wine become things you no longer need — not things you have to set up.
+Audio Player Loader is that native path. It uses **only what already ships on every Mac** — the built-in Terminal and bash, plus Apple's own `diskutil` and standard file tools. There is nothing to download, no emulation layer, and no Windows involved. Plug in a hub of devices, drag the script onto Terminal, and go. Parallels, CrossOver, and Wine become things you no longer need — not things you have to set up.
 
 ![The disk chooser: each row is one physical disk, all preselected, Cmd-click to keep](images/06-choose.png)
 
@@ -36,7 +36,7 @@ Audio Player Loader is that native path. It uses **only what already ships on ev
 
 - **Whole-disk erase with an explicit two-step confirmation.** A native list of the external disks (all preselected; Cmd-click to deselect ones to keep), then a distinct "ERASE these / KEEP these" summary whose default button is **Back**. Nothing is wiped without an on-screen confirmation that names each disk by size and volume.
 - **Parallel erase and copy across every device at once.** Each device gets its own background worker, so wall-clock time is roughly the slowest single device — not the sum of them all.
-- **Files copied in name order.** The copy uses `rsync`, which transfers its file list in sorted path order. On a freshly formatted volume the FAT directory entries are created in that same order, so minimal player firmware that reads files in directory order plays them in sequence. Numbered folders (`001 …`, `002 …`) are how you set the play order.
+- **Files copied in name order.** The tool enumerates your content itself and writes every folder and file **with its final name, in strict name-sorted order** — no temp files, no renames — so on the freshly formatted volume each FAT directory entry is created in play order, which is the order minimal player firmware follows. Numbered folders (`001 …`, `002 …`) are how you set that order. (It deliberately does *not* use `rsync`: openrsync's temp-file renames scramble FAT entry order — a bug caught on a real player and verified fixed at the raw-directory-table level.)
 - **Prevents and scrubs macOS junk.** Suppresses Finder's `.DS_Store` writing for the run, blocks Spotlight from ever indexing each volume (a `.metadata_never_index` marker — so no `.Spotlight-V100` is created), then removes the `.DS_Store` and `._*` AppleDouble sidecars macOS forces onto FAT. A finished device carries only two tiny hidden marker files that keep Macs from re-junking it.
 - **Blinks the LED of failed devices.** In the graphical run-again dialog, devices that failed have their light blinked (by forced writes) so you can physically find them in a crowded hub.
 - **Renames failures to `REDO`.** Failed volumes are relabeled `REDO` and left connected, so they stand out in Finder and in the next run's list.
@@ -130,7 +130,7 @@ Each run proceeds top-to-bottom through a short sequence of phases; the erase an
 4. **Pick & confirm** — the two-dialog picker + "ERASE / KEEP" summary.
 5. **Erase (parallel)** — re-verify each disk's identity, then `diskutil eraseDisk FAT32 <LABEL> MBRFormat`, with one retry.
 6. **Prepare** — mount each fresh volume and confirm it is really ours.
-7. **Copy (parallel)** — `rsync` the content, scrub macOS junk, eject.
+7. **Copy (parallel)** — write the content in sorted order (ordered copy loop), scrub macOS junk, eject.
 8. **Progress** — the main process polls per-device status files to draw a live bar and detect stalls.
 9. **Results** — bucket every device into **GOOD / CHECK / REDO**, relabel failures, print a summary and verification advice.
 10. **Run again** — offer to re-run for the next batch.
@@ -141,7 +141,7 @@ The safety guards that make it trustworthy to run:
 - **Skips write-protected media.** Hardware-locked cards (e.g. a MegaVoice CSD write-protect) are detected and skipped rather than failing confusingly mid-run.
 - **Two-step human confirmation.** You see exactly what will be wiped, by size and volume name, and the summary dialog defaults to **Back**.
 - **Re-verifies disk identity right before erasing.** macOS reuses `diskN` numbers; immediately before each erase the script re-checks that the disk's exact byte size still matches and it is still external + physical, so a device swapped while the dialog was open can't misdirect the erase.
-- **Only copies to a correctly-formatted volume on the right device node.** After erasing, it copies only to a volume that carries the chosen label *and* resolves to the expected `/dev/diskNs1`; and before/after each `rsync` it re-confirms the mount still points at that device. *During* the copy, the progress monitor re-checks the same identity every poll — if a device vanishes mid-copy it kills that transfer within seconds and removes any stray `/Volumes/<name>` folder left on the boot disk, so the payload never silently lands on the internal drive.
+- **Only copies to a correctly-formatted volume on the right device node.** After erasing, it copies only to a volume that carries the chosen label *and* resolves to the expected `/dev/diskNs1`; and before/after each copy it re-confirms the mount still points at that device. *During* the copy, the progress monitor re-checks the same identity every poll — if a device vanishes mid-copy it kills that transfer within seconds and removes any stray `/Volumes/<name>` folder left on the boot disk, so the payload never silently lands on the internal drive.
 - **Stall timeout.** A copy with zero write progress for 300 seconds is killed and marked `REDO`, so one dying device can't wedge the whole batch.
 - **Restores the one host setting it toggles.** It temporarily disables Finder's `.DS_Store`-on-USB writing during the run and puts the original value back on exit — your Mac is left exactly as it was found.
 
@@ -153,7 +153,7 @@ This is a condensed summary. For the complete guard-by-guard table, the reasonin
 
 Loading is much faster than imaging a device with `dd` or Balena Etcher, for two compounding reasons:
 
-- **Only the real files are copied.** `rsync` moves just your actual content — not a whole-disk image and its empty slack — and there is no read-back verification pass. Restoring an image typically writes the entire image *and reads it all back* to validate; copying the files skips both.
+- **Only the real files are copied.** The tool moves just your actual content — not a whole-disk image and its empty slack — and there is no read-back verification pass. Restoring an image typically writes the entire image *and reads it all back* to validate; copying the files skips both.
 - **Every device runs in parallel.** Erase and copy fan out across all devices at once, so total time is roughly the slowest single device, not the sum. (Spotlight indexing is also held off each freshly-mounted volume so it doesn't contend for the device's limited I/O mid-write.)
 
 In practice the remaining bottleneck is shared USB-hub bandwidth, not the Mac or the tool — spreading devices across multiple hubs on separate ports raises the ceiling further. Keeping your content on the Mac's internal SSD helps too: it reads far faster than any USB source device and never competes with the USB writes, so a USB-hosted source — even on a separate port — can itself become the bottleneck.

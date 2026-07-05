@@ -104,8 +104,8 @@
       Intel Macs. Distribution is source-only; there are no binary artifacts to sign, notarize, or match to a CPU.</li>
     <li><strong>Shell:</strong> <code>/bin/bash</code> (bash 3.2, the version Apple ships). The script
       re-execs itself under <code>/bin/bash</code> if launched with <code>sh</code>/<code>zsh</code> or in POSIX mode.</li>
-    <li><strong>External commands, all built into macOS:</strong> <code>diskutil</code>, <code>rsync</code>
-      (Apple's openrsync), <code>osascript</code>, <code>dd</code>, <code>sync</code>,
+    <li><strong>External commands, all built into macOS:</strong> <code>diskutil</code>,
+      <code>osascript</code>, <code>cp</code>, <code>touch</code>, <code>sort</code>, <code>dd</code>, <code>sync</code>,
       <code>dot_clean</code>, <code>defaults</code>, <code>scutil</code>, <code>df</code>,
       <code>du</code>, <code>find</code>, <code>mktemp</code>, <code>pkill</code>, <code>sed</code>/<code>awk</code>.</li>
     <li><strong>No third-party software</strong> is installed or required. Nothing is downloaded.</li>
@@ -145,8 +145,8 @@
     <li><strong>Erase (parallel).</strong> Each disk is re-verified (§5) then <code>eraseDisk</code>'d, with one retry.</li>
     <li><strong>Prepare &amp; verify.</strong> Mount each freshly erased volume; proceed only if its name is the
       chosen label and it resolves to the expected device node.</li>
-    <li><strong>Copy (parallel).</strong> <code>rsync</code> the content to each verified volume, with
-      before/after mount re-verification.</li>
+    <li><strong>Copy (parallel).</strong> Write the content to each verified volume with the tool's own
+      ordered copy loop (see the callout below), with before/after mount re-verification.</li>
     <li><strong>Scrub &amp; eject.</strong> Remove macOS junk that FAT can't avoid (§7), then eject (with retries).</li>
     <li><strong>Results.</strong> Group every device into <span class="tag ok">GOOD</span>
       <span class="tag check">CHECK</span> <span class="tag redo">REDO</span>; blink failed devices;
@@ -155,14 +155,23 @@
   </ol>
 
   <div class="callout ok">
-    <strong>Files are copied in name order, recursively — by design.</strong> The copy is done with
-    <code>rsync</code>, which transfers its file list in sorted path order (alphabetical by full path,
-    depth-first through subfolders). Because the target volume is freshly formatted, each file's FAT
-    <em>directory entry</em> is created in that same order — so the files are physically laid down on the
-    device in order. Minimal player firmware that reads files in directory-entry order (rather than
-    sorting them itself) therefore reads and plays the content in the intended sequence. This is why the
-    content folders and files are numbered (<code>001…</code>, <code>002…</code>): the numbering is the
-    play order, and the sorted copy preserves it onto the device.
+    <strong>Files are copied in name order, recursively — by design.</strong> The tool enumerates the
+    payload itself (<code>find … | LC_ALL=C sort -z</code>) and creates every folder and file <em>with its
+    final name, in strict byte-sorted path order</em> — no temp files, no renames. Because the target
+    volume is freshly formatted, each FAT <em>directory entry</em> is created in exactly that order, and
+    minimal player firmware that reads files in directory-entry order (rather than sorting them itself)
+    plays the content in the intended sequence. This is why the content folders and files are numbered
+    (<code>001…</code>, <code>002…</code>): the numbering is the play order, and the ordered writer
+    preserves it onto the device.
+    <br><br>
+    <strong>Why not <code>rsync</code>?</strong> Earlier versions used <code>rsync -rt</code>, trusting its
+    sorted file list — and a real player exposed the flaw: Apple's openrsync writes each file under a
+    <code>.name.XXXXXX</code> temporary name and renames it into place, and on FAT every rename re-allocates
+    the directory entry <em>first-fit</em> into slots freed by earlier temp entries, scrambling the final
+    entry order (name-length dependent, so small tests can pass by luck). The fix was reproduced from the
+    affected source folder and verified by parsing the raw FAT directory tables: the ordered writer yields
+    exact name-sorted entry order in every directory. Any substitute copy tool must create files with
+    final names in sorted order — an <code>rsync</code>-style temp/rename strategy will corrupt play order.
   </div>
 
   <h2 id="guards">5. Safety guards &amp; rationale</h2>
@@ -189,7 +198,7 @@
       <td>Copy only to a disk whose freshly mounted volume has the chosen label <em>and</em> whose mount resolves to <code>/dev/diskNs1</code>.</td>
       <td>If an erase silently failed, an old/foreign partition could otherwise be copied onto and reported OK.</td></tr>
     <tr><td>Copy-time mount re-verify (<code>ok_mount</code>)</td>
-      <td>Before and after <code>rsync</code>, confirm <code>df &lt;mount&gt;</code> is still <code>/dev/diskNs1</code>; <em>during</em> the copy the progress monitor re-checks the same identity every poll and, after two consecutive misses (~4&nbsp;s), kills that transfer and removes any stray boot-disk folder the yank left behind.</td>
+      <td>Before and after the copy, confirm <code>df &lt;mount&gt;</code> is still <code>/dev/diskNs1</code>; <em>during</em> the copy the progress monitor re-checks the same identity every poll and, after two consecutive misses (~4&nbsp;s), kills that transfer and removes any stray boot-disk folder the yank left behind.</td>
       <td>If a device vanishes, macOS can leave <code>/Volumes/&lt;name&gt;</code> as a plain folder on the <strong>boot disk</strong>; writing there would copy the payload onto the internal drive.</td></tr>
     <tr><td>Blink write guard</td>
       <td>The LED-blink loop re-checks <code>df == /dev/diskNs1</code> before <em>every</em> write, and only blinks volumes named as the current or <code>REDO</code> label.</td>
@@ -226,7 +235,7 @@
     <strong>Why this is much faster than imaging a device.</strong> Restoring a disk image (e.g. with
     <code>dd</code> or Balena Etcher) writes the <em>entire image</em> — including empty space — to each
     device, and typically <em>reads it all back</em> to validate; a 2&nbsp;GB image can mean up to ~4&nbsp;GB
-    of I/O per device. This tool instead does a plain <code>rsync</code> of just the real content
+    of I/O per device. This tool instead does a plain ordered file copy of just the real content
     (only your actual content — ≈1.6&nbsp;GB in the original deployment), with no image and no
     read-back verification pass. Three things compound the win:
     <ul>
@@ -321,11 +330,11 @@
       or deleting the key if it was originally absent. The original is captured once and carried across the
       run-again re-exec, so restoration happens only when the whole session ends (Done, a dead-end, or Ctrl-C),
       i.e. after every device has been written and ejected — never between batches. Belt-and-suspenders on top
-      of this, junk is also kept off devices by rsync's <code>--exclude</code> list and a per-device scrub (§7).</li>
+      of this, junk is also kept off devices by the copy loop's exclude filters and a per-device scrub (§7).</li>
     <li>Spotlight suppression is <strong>scoped to the target volume</strong>: a <code>.metadata_never_index</code>
       marker file on the device itself (no <code>mdutil</code>, no host or global preference of any kind); it is
       erased with the device on the next run.</li>
-    <li>The source folder is left untouched: rsync's excludes already keep its <code>.DS_Store</code>/<code>._*</code>
+    <li>The source folder is left untouched: the copy filters already keep its <code>.DS_Store</code>/<code>._*</code>
       out of the copy, so there is no need to strip the source's own extended attributes or delete from it.</li>
   </ul>
 
@@ -336,15 +345,15 @@
     <li>Cannot avoid <code>.fseventsd</code> (OS-mandated; <code>no_log</code> keeps it to one empty file). A
       <code>.Spotlight-V100</code> is prevented on current macOS via <code>.metadata_never_index</code>; if an older
       macOS creates one anyway it cannot be removed without root (SIP) and is left in place.</li>
-    <li>macOS-only; relies on <code>diskutil</code> and Apple's <code>osascript</code>/<code>openrsync</code>.</li>
-    <li>Correct playback order (§4) depends on <code>rsync</code>'s sorted transfer; both Apple's openrsync and standard rsync provide it, but a substitute copy tool would need the same guarantee.</li>
+    <li>macOS-only; relies on <code>diskutil</code> and Apple's <code>osascript</code>.</li>
+    <li>Correct playback order (§4) is guaranteed by the tool's own ordered writer. Do <strong>not</strong> substitute <code>rsync</code> or any temp-file-and-rename copier — on FAT that scrambles directory-entry order (§4 callout).</li>
   </ul>
 
   <h2 id="audit">11. Auditing notes</h2>
   <p>The script is a single self-contained file with no obfuscation; every destructive command is
   <code>diskutil eraseDisk</code> and every write target is validated against <code>/dev/diskNs1</code>
   immediately before use. To audit quickly: read the guards in §5 against the code, and grep for the
-  three commands that touch disks — <code>eraseDisk</code>, <code>rsync</code>, and the blink
+  three writers that touch disks — <code>eraseDisk</code>, the ordered copy loop's <code>cp</code>, and the blink
   <code>dd</code> — confirming each is preceded by the identity/mount check described above. The tool was
   hardened across several rounds of adversarial review; the current guards are the result.</p>
 

@@ -42,11 +42,14 @@
 #                       FAT for any file carrying the un-clearable
 #                       com.apple.provenance xattr), so they are SCRUBBED
 #                       from the volume after the copy
-#   .Spotlight-V100  -> created by mdutil, SIP-protected (unremovable) but
-#                       tiny + harmless on the players — left as-is
+#   .Spotlight-V100  -> PREVENTED: a .metadata_never_index marker at the volume
+#                       root stops Spotlight from ever indexing it (verified on
+#                       Tahoe; stays on the device so re-plugs stay clean too).
+#                       mdutil is not used — it would create the folder itself.
 #   .fseventsd       -> off-switch is an empty no_log file inside it; tiny,
 #                       unavoidable, harmless — left as-is
-# Net remnant on each device: .Spotlight-V100/ and .fseventsd/no_log only.
+# Net remnant on each device: .metadata_never_index and .fseventsd/no_log —
+# two tiny hidden files, both purposeful.
 
 # ===========================================================================
 # HOW THIS SCRIPT IS ORGANISED  (read this first if you're modifying it)
@@ -307,6 +310,7 @@ RSYNC_EXCLUDES=(
   --exclude '*.md' --exclude '*.html' --exclude '/images'
   --exclude '._*' --exclude '.DS_Store' --exclude '.Spotlight-V100'
   --exclude '.fseventsd' --exclude '.Trashes' --exclude '.TemporaryItems'
+  --exclude '.metadata_never_index'
 )
 
 # --- Which PHYSICAL disks hold the source? Never erase those. ---------
@@ -578,8 +582,17 @@ for dev in "${devices[@]}"; do
     echo "  SKIPPING $dev — unexpected volume after erase" >&2
     continue
   fi
-  # Prevention, before anything else touches the fresh volume
-  mdutil -i off "$mp" >/dev/null 2>&1
+  # Prevention, before anything else touches the fresh volume:
+  #  - .metadata_never_index tells Spotlight to never index this volume, so no
+  #    .Spotlight-V100 is ever created (empirically verified on Tahoe; an older
+  #    macOS that ignores the marker may still create the folder — harmless,
+  #    and not counted as junk below). mdutil -i off is deliberately NOT used:
+  #    it suppresses indexing too, but itself creates .Spotlight-V100.
+  #    The marker is LEFT on the finished device on purpose — it keeps the
+  #    verification re-plug (and any future Mac) from re-junking the volume.
+  #  - .fseventsd/no_log is the sanctioned "no filesystem-event logs here"
+  #    switch; without it fseventsd writes logs into .fseventsd at unmount.
+  touch "$mp/.metadata_never_index" 2>/dev/null
   mkdir "$mp/.fseventsd" 2>/dev/null; touch "$mp/.fseventsd/no_log"
   copy_devs+=("$dev")
   mps+=("$mp")
@@ -627,9 +640,10 @@ for idx in "${!copy_devs[@]}"; do
       # the read-only flag anyway). See the project notes if this is revisited.
       dot_clean -m "$mp" 2>/dev/null
       find "$mp" \( -name '._*' -o -name '.DS_Store' \) -delete 2>/dev/null
-      # .Spotlight-V100 (created by mdutil) and .fseventsd are SIP-protected /
-      # unavoidable and harmless on the players — left as-is, NOT counted as
-      # junk. Anything below survived the scrub, so it is genuinely unexpected.
+      # .fseventsd (holding no_log) and our .metadata_never_index marker are
+      # expected and purposeful. A .Spotlight-V100 can only appear on an older
+      # macOS that ignores the marker (SIP-protected, harmless) — none of these
+      # count as junk. Anything below survived the scrub: genuinely unexpected.
       junk=$(find "$mp" -mindepth 1 \
                \( -name '._*' -o -name '.DS_Store' \
                   -o -name '.Trashes' -o -name '.TemporaryItems' \) 2>/dev/null)

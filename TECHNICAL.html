@@ -105,7 +105,7 @@
     <li><strong>Shell:</strong> <code>/bin/bash</code> (bash 3.2, the version Apple ships). The script
       re-execs itself under <code>/bin/bash</code> if launched with <code>sh</code>/<code>zsh</code> or in POSIX mode.</li>
     <li><strong>External commands, all built into macOS:</strong> <code>diskutil</code>, <code>rsync</code>
-      (Apple's openrsync), <code>osascript</code>, <code>dd</code>, <code>sync</code>, <code>mdutil</code>,
+      (Apple's openrsync), <code>osascript</code>, <code>dd</code>, <code>sync</code>,
       <code>dot_clean</code>, <code>defaults</code>, <code>scutil</code>, <code>df</code>,
       <code>du</code>, <code>find</code>, <code>mktemp</code>, <code>pkill</code>, <code>sed</code>/<code>awk</code>.</li>
     <li><strong>No third-party software</strong> is installed or required. Nothing is downloaded.</li>
@@ -234,8 +234,8 @@
         and no validation re-read.</li>
       <li><strong>Every device runs in parallel</strong> — erase and copy fan out across all devices at once,
         so wall-clock is roughly the slowest single device, not the sum of all of them.</li>
-      <li><strong>Spotlight is held off each device</strong> — <code>mdutil -i off</code> stops
-        <code>mds</code>/<code>mdworker</code> from indexing each freshly-mounted volume mid-write, which
+      <li><strong>Spotlight is held off each device</strong> — a <code>.metadata_never_index</code> marker
+        written the moment each fresh volume mounts stops <code>mds</code>/<code>mdworker</code> from ever indexing it, which
         would otherwise contend for the device's limited I/O — a real drag when many cheap USB devices are
         written simultaneously (§7).</li>
     </ul>
@@ -256,11 +256,15 @@
     <li><code>._*</code> AppleDouble — <strong>cannot be prevented</strong> on current macOS: they are synthesized
       on FAT for any file carrying the unclearable <code>com.apple.provenance</code> xattr. They are therefore
       <em>scrubbed</em> after the copy (<code>dot_clean</code> + <code>find -delete</code>), not prevented.</li>
-    <li><code>.Spotlight-V100</code> — created by <code>mdutil -i off</code>; SIP-protected and not removable
-      by a normal user, but tiny and harmless to the players, so it is left and explicitly not treated as junk.</li>
+    <li><code>.Spotlight-V100</code> — <strong>prevented</strong>: a <code>.metadata_never_index</code> marker is written to
+      the volume root at mount, and Spotlight then never creates its index folder at all (verified on
+      current macOS). The marker is deliberately left on the finished device so a verification re-plug —
+      or any future Mac — cannot re-junk the volume. On an older macOS that ignores the marker the folder
+      may still appear; it is SIP-protected, tiny, harmless, and not treated as junk.</li>
     <li><code>.fseventsd/no_log</code> — the sanctioned marker that stops event logging; tiny, unavoidable, left in place.</li>
   </ul>
-  <p>Net on each finished device: only <code>.Spotlight-V100/</code> and <code>.fseventsd/no_log</code>.
+  <p>Net on each finished device: only <code>.metadata_never_index</code> and <code>.fseventsd/no_log</code> —
+  two tiny hidden files, both purposeful (they keep Spotlight and fseventsd from writing anything bigger).
   The script does <strong>not</strong> set a read-only flag on the files (<code>chflags uchg</code> would
   re-create removable-but-annoying <code>._*</code> sidecars, and a clean volume was judged more valuable;
   most players/Android ignore the flag anyway).</p>
@@ -305,9 +309,9 @@
       run-again re-exec, so restoration happens only when the whole session ends (Done, a dead-end, or Ctrl-C),
       i.e. after every device has been written and ejected — never between batches. Belt-and-suspenders on top
       of this, junk is also kept off devices by rsync's <code>--exclude</code> list and a per-device scrub (§7).</li>
-    <li><code>mdutil -i off &lt;mountpoint&gt;</code> — <strong>scoped to the target volume</strong> (suppresses
-      Spotlight indexing on that device during the copy); its only artifact lives on the device, which is
-      erased on the next run. No global preference is set.</li>
+    <li>Spotlight suppression is <strong>scoped to the target volume</strong>: a <code>.metadata_never_index</code>
+      marker file on the device itself (no <code>mdutil</code>, no host or global preference of any kind); it is
+      erased with the device on the next run.</li>
     <li>The source folder is left untouched: rsync's excludes already keep its <code>.DS_Store</code>/<code>._*</code>
       out of the copy, so there is no need to strip the source's own extended attributes or delete from it.</li>
   </ul>
@@ -316,7 +320,9 @@
   <ul>
     <li>Cannot detect a device that fully disconnected/powered-off mid-copy (see §8) — independent verification is required.</li>
     <li>Does not enforce write-protection on the loaded files (by design; see §7).</li>
-    <li>Cannot remove <code>.Spotlight-V100</code>/<code>.fseventsd</code> (SIP / OS-mandated).</li>
+    <li>Cannot avoid <code>.fseventsd</code> (OS-mandated; <code>no_log</code> keeps it to one empty file). A
+      <code>.Spotlight-V100</code> is prevented on current macOS via <code>.metadata_never_index</code>; if an older
+      macOS creates one anyway it cannot be removed without root (SIP) and is left in place.</li>
     <li>macOS-only; relies on <code>diskutil</code> and Apple's <code>osascript</code>/<code>openrsync</code>.</li>
     <li>Correct playback order (§4) depends on <code>rsync</code>'s sorted transfer; both Apple's openrsync and standard rsync provide it, but a substitute copy tool would need the same guarantee.</li>
   </ul>

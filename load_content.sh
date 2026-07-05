@@ -16,7 +16,11 @@
 # If invoked with sh/zsh/dash by mistake, restart under real bash.
 # NB: macOS /bin/sh IS bash but in POSIX mode (BASH_VERSION set!), so we
 # must also check POSIXLY_CORRECT or process substitution below breaks.
-[ -n "$BASH_VERSION" ] && [ -z "$POSIXLY_CORRECT" ] || exec /bin/bash "$0" "$@"
+# The re-exec strips POSIXLY_CORRECT from the environment (env -u): if the
+# caller had EXPORTED it, a plain `exec /bin/bash` would inherit it, re-enter
+# POSIX mode, and exec again — an infinite loop. ${VAR+x} tests set-ness, since
+# even an empty POSIXLY_CORRECT puts bash in POSIX mode.
+[ -n "$BASH_VERSION" ] && [ -z "${POSIXLY_CORRECT+x}" ] || exec /usr/bin/env -u POSIXLY_CORRECT /bin/bash "$0" "$@"
 
 # One-pass loading for all attached USB devices, in parallel:
 #   1) GUI disk picker (whole DISKS, all their volumes shown) with a
@@ -27,7 +31,8 @@
 #
 # This script lives INSIDE the content folder (HTG-style, like HTGv4.CMD):
 # it copies everything in its own directory to each device, except itself
-# and any .app / .zip / .cmd / .txt helper files.
+# and its helper files (.app / .zip / .cmd / .txt / .md / .html and the
+# images/ folder — see RSYNC_EXCLUDES below for the authoritative list).
 #
 # Junk handling, by mechanism:
 #   .DS_Store        -> Finder's .DS_Store-on-USB writing is suppressed for the
@@ -36,7 +41,7 @@
 #   ._* AppleDouble  -> CANNOT be prevented on modern macOS (synthesized on
 #                       FAT for any file carrying the un-clearable
 #                       com.apple.provenance xattr), so they are SCRUBBED
-#                       from the volume after the copy, before locking
+#                       from the volume after the copy
 #   .Spotlight-V100  -> created by mdutil, SIP-protected (unremovable) but
 #                       tiny + harmless on the players — left as-is
 #   .fseventsd       -> off-switch is an empty no_log file inside it; tiny,
@@ -226,7 +231,7 @@ run_again_prompt() {
     if [ "$any" -eq 1 ]; then
       m="$n_good device(s) loaded; $n_redo did NOT and need redoing."$'\n\n'"All devices blink WHILE loading, so look at them now the run is done and sort by light:"$'\n'"•  STILL BLINKING = failed — LEAVE these connected."$'\n'"•  Solid light = loaded OK — unplug and set aside (still test later)."$'\n'"•  Dark / no light = dead battery, also failed — unplug and set aside to charge fully before retrying."$'\n\n'"Add any more devices you want to load, then click \"Run again\" to redo the still-blinking ones — or \"Done\"."
     else
-      m="$n_good device(s) loaded; $n_redo did NOT and need redoing (still connected, renamed $REDO_LABEL)."$'\n\n'"Sort by light: solid = loaded (unplug, set aside, test later); dark = dead battery (unplug, charge fully before retrying). Leave the $REDO_LABEL failures connected."$'\n\n'"Add any more devices you want to load, then click \"Run again\" — or \"Done\"."
+      m="$n_good device(s) loaded; $n_redo did NOT and need redoing — but none of them shows a blinkable volume right now (unplugged already? battery dead? failed before renaming?)."$'\n\n'"Check Finder for \"$REDO_LABEL\" volumes to find any still connected. Sort the rest by light: solid = loaded (set aside, test later); dark = dead battery (charge fully before retrying)."$'\n\n'"Add any more devices you want to load, then click \"Run again\" — or \"Done\"."
     fi
   elif [ "$n_check" -gt 0 ]; then
     # Content copied, but CHECK devices need a human look (e.g. could-not-eject
@@ -265,7 +270,7 @@ trap cleanup EXIT
 # lets the operator use a NEW label per batch, which is what makes the
 # after-the-run "re-plug and check the label" verification meaningful.
 if [ "$use_gui" -eq 1 ]; then
-  raw=$(osascript -e 'text returned of (display dialog "Volume label for the USB devices." & return & "Letters and numbers only, up to 11 characters. Leave as-is for the default." default answer "'"$DEFAULT_LABEL"'" with title "'"$APP_TITLE"'" buttons {"Cancel", "OK"} default button "OK")' 2>/dev/null) || { echo "Cancelled."; exit 0; }
+  raw=$(osascript -e 'text returned of (display dialog "Volume label for the USB devices." & return & "Letters and numbers, up to 11 - saved as UPPERCASE. Leave as-is for the default." default answer "'"$DEFAULT_LABEL"'" with title "'"$APP_TITLE"'" buttons {"Cancel", "OK"} default button "OK")' 2>/dev/null) || { echo "Cancelled."; exit 0; }
 else
   printf 'Volume label for devices [%s]: ' "$DEFAULT_LABEL"
   read -r raw
@@ -339,7 +344,10 @@ while IFS= read -r dev; do
   fi
   # Cards hard-locked via their CSD write-protect bit (MegaVoice-style)
   # enumerate as read-only media — detect and skip, don't fail confusingly
-  if diskutil info "$dev" | grep -q 'Media Read-Only: *Yes'; then
+  # Field label changed across macOS versions: 10.15+ prints "Media Read-Only",
+  # earlier releases printed "Read-Only Media" — match both or the guard is
+  # silently inert on the older systems we claim to support.
+  if diskutil info "$dev" | grep -qE '(Media Read-Only|Read-Only Media): *Yes'; then
     echo "Skipping $dev — WRITE-PROTECTED (unlock it first, e.g. green button on the card locker)"
     continue
   fi
@@ -459,6 +467,14 @@ fi
 # would just re-capture the value we ourselves set on run 1.
 if [ -z "${DSUSB_ORIG+x}" ]; then
   DSUSB_ORIG=$(defaults read com.apple.desktopservices DSDontWriteUSBStores 2>/dev/null)
+  # `defaults read` can return 1/0 OR true/false/YES/NO depending on how the
+  # key was written — normalize so restore_dsusb restores rather than deletes
+  # a value someone had set by hand.
+  case "$DSUSB_ORIG" in
+    1|[Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]) DSUSB_ORIG=1 ;;
+    0|[Ff][Aa][Ll][Ss][Ee]|[Nn][Oo]) DSUSB_ORIG=0 ;;
+    *) DSUSB_ORIG="" ;;   # key absent (or unrecognized) -> delete on restore
+  esac
   export DSUSB_ORIG
 fi
 defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
@@ -468,7 +484,8 @@ defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
 # AppleDouble sidecars, synthesized on FAT) is scrubbed off each device, not here.
 
 # --- Payload size, measured the way rsync will actually copy it --------
-payload_b=$(cd "$SRC" && find . \( -name '*.app' -o -name '.fseventsd' -o -path './images' \) -prune -o \
+payload_b=$(cd "$SRC" && find . \( -name '*.app' -o -name '.fseventsd' -o -name '.Spotlight-V100' \
+    -o -name '.Trashes' -o -name '.TemporaryItems' -o -path './images' \) -prune -o \
   -type f ! -name "$SELF" ! -name '*.zip' \
   ! -name '*.cmd' ! -name '*.CMD' ! -name '*.txt' ! -name '*.TXT' \
   ! -name '*.md' ! -name '*.html' \
@@ -494,7 +511,9 @@ on_interrupt() {
     [ -f "$STATUS_DIR/$dev" ] || incomplete="$incomplete $dev"
   done
   if [ -n "$incomplete" ]; then
-    echo "These devices are INCOMPLETE — do NOT hand them out; re-run the script:"
+    echo "These devices are INCOMPLETE — do NOT hand them out; re-run the script."
+    echo "(They may still carry the \"${LABEL:-batch}\" name and look loaded in Finder"
+    echo "— do not trust the label; only a completed run counts.)"
     for d in $incomplete; do echo "  $d"; done
   fi
   exit 130
@@ -628,7 +647,7 @@ for idx in "${!copy_devs[@]}"; do
       elif try_eject; then
         echo "OK loaded and ejected" > "$STATUS_DIR/$dev"
       else
-        echo "CHECK content OK but could not eject — unplug this one manually" > "$STATUS_DIR/$dev"
+        echo "CHECK content OK but could not eject — eject it in Finder, then unplug" > "$STATUS_DIR/$dev"
       fi
     else
       echo "REDO copy failed: $(tail -1 "$STATUS_DIR/$dev.err" 2>/dev/null)" > "$STATUS_DIR/$dev"
@@ -652,6 +671,7 @@ announced=" "                  # space-delimited set of devices already announce
 for idx in "${!copy_devs[@]}"; do
   last_used[idx]=0
   last_move[idx]=$SECONDS
+  gone_polls[idx]=0   # consecutive polls where df no longer showed OUR device
 done
 
 while :; do
@@ -682,6 +702,7 @@ while :; do
     fi
     used=$(df -k "$mp" 2>/dev/null | awk -v d="/dev/${dev}s1" '$1 == d {print $3}')
     if [ -n "$used" ]; then
+      gone_polls[idx]=0
       [ "$used" -gt "$total_k" ] && used=$total_k
       if [ "$used" -gt "${last_used[idx]}" ]; then
         last_used[idx]=$used
@@ -693,6 +714,35 @@ while :; do
       fi
       done_k=$((done_k + used))
     else
+      # df no longer resolves this mount point to OUR device — the device was
+      # yanked or its volume vanished. rsync does NOT stop on its own: it keeps
+      # creating the remaining files by path, and if macOS left /Volumes/<label>
+      # behind as a plain folder, those writes land on the BOOT DISK. ok_mount
+      # only guards before/after rsync; this is the DURING guard. Two misses in
+      # a row (~4 s) before acting, so one transient df hiccup can't kill a
+      # healthy copy — safety still beats completion.
+      gone_polls[idx]=$((gone_polls[idx] + 1))
+      if [ "${gone_polls[idx]}" -ge 2 ] && kill -0 "${pids[idx]}" 2>/dev/null; then
+        pkill -P "${pids[idx]}" 2>/dev/null
+        kill "${pids[idx]}" 2>/dev/null
+        st_msg="REDO volume disappeared during copy (device unplugged or died?)"
+        # If a ghost /Volumes/<label> folder remains ON THE BOOT DISK, remove
+        # the spilled files. Triple-guarded: path is under /Volumes/, it is a
+        # real directory, and df resolves it to the SAME device node as the
+        # /Volumes parent directory — true only for a plain folder (which lives
+        # on its parent's filesystem), never for a mounted volume (which shows
+        # its own device). NB: compare to /Volumes, NOT / — on modern macOS the
+        # root is a sealed snapshot on a different device node than the Data
+        # volume that actually hosts /Volumes.
+        case "$mp" in /Volumes/?*)
+          if [ -d "$mp" ] &&
+             [ "$(df "$mp" 2>/dev/null | awk 'NR==2 {print $1}')" = "$(df /Volumes 2>/dev/null | awk 'NR==2 {print $1}')" ]; then
+            rm -rf "$mp" 2>/dev/null
+            st_msg="$st_msg — stray boot-disk folder cleaned up"
+          fi ;;
+        esac
+        echo "$st_msg" > "$STATUS_DIR/$dev"
+      fi
       done_k=$((done_k + last_used[idx]))
     fi
   done
@@ -784,20 +834,21 @@ if [ "$n_redo" -gt 0 ]; then
   printf '%s' "$redo_list"
   echo
   echo "${cB}WHAT TO DO NOW${cR}"
-  echo "-------------"
+  echo "--------------"
   echo "$n_good device(s) loaded fine and were EJECTED — they have dropped"
   echo "off the Mac and will NOT be touched if you run again."
   echo
-  echo "The $n_redo failed device(s) are still plugged in, now named \"$REDO_LABEL\"."
+  echo "$n_redo device(s) failed; those still connected have been renamed \"$REDO_LABEL\"."
   echo "All devices blink WHILE loading; the ones STILL blinking now are the failures."
   echo "LEAVE those connected. Unplug the rest and sort them: solid light = finished"
   echo "(set aside, test later); no light = dead battery (set aside to charge fully)."
   echo "Then add any fresh devices and click \"Run again\" to redo the still-blinking ones."
   echo "Re-seat a failing device's cable; try a different cable and port too."
   echo "Contact cleaner on the connector, or a full charge, can fix stubborn ones."
-  echo "In Finder under \"$COMPUTER_NAME\", the only USB volumes still showing are"
-  echo "these failed ones. They are still MOUNTED, so if you accidentally pull one"
-  echo "you'll get an \"unsafe removal\" warning — a sign you grabbed a failed device"
+  echo "In Finder under \"$COMPUTER_NAME\", the failed devices show as \"$REDO_LABEL\""
+  echo "volumes (your source drive, if it is USB, and any CHECK device that could"
+  echo "not eject also remain). They are still MOUNTED, so accidentally pulling one"
+  echo "gives an \"unsafe removal\" warning — a sign you grabbed a failed device"
   echo "instead of a finished (ejected) one. Unplug one at a time and watch for a"
   echo "\"$REDO_LABEL\" to vanish from Finder to identify it."
   echo
@@ -810,8 +861,9 @@ if [ "$n_redo" -gt 0 ]; then
   echo "proper charging cable) before reconnecting it to reload."
   echo
   echo "To retry the failures: use the \"Run again\" dialog (or re-run the script)."
-  echo "Because the good devices already ejected, only the still-connected"
-  echo "($REDO_LABEL) devices appear — so it redoes just the failures."
+  echo "The loaded devices have already ejected, so the next run lists only what is"
+  echo "still connected — the $REDO_LABEL failures, plus anything else still plugged"
+  echo "in (a CHECK device, another drive): deselect anything you don't want erased."
 elif [ "$n_check" -eq 0 ]; then
   echo "${cGRN}All $n_good device(s) loaded successfully and were ejected — safe to"
   echo "unplug them all.${cR}"
@@ -831,7 +883,7 @@ if [ "$n_redo" -gt 0 ]; then
 fi
 echo "  $vstep. Unplug and re-plug the rest — or re-plug the whole hub — and confirm"
 echo "     each one comes back mounted with the label \"${LABEL}\"."; vstep=$((vstep + 1))
-echo "  $vstep. One device at a time is the most reliable check."
+echo "  $vstep. Check one device at a time — and spot-play a track in a real player."
 echo "  ${cDIM}Tip: use a NEW, unused label for each batch. Then any device that"
 echo "  quietly kept its OLD content (never really written) is easy to spot.${cR}"
 echo

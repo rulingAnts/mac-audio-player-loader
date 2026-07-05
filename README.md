@@ -132,7 +132,7 @@ Each run proceeds top-to-bottom through a short sequence of phases; the erase an
 6. **Prepare** — mount each fresh volume and confirm it is really ours.
 7. **Copy (parallel)** — `rsync` the content, scrub macOS junk, eject.
 8. **Progress** — the main process polls per-device status files to draw a live bar and detect stalls.
-9. **Results** — bucket every device into **OK / CHECK / REDO**, relabel failures, print a summary and verification advice.
+9. **Results** — bucket every device into **GOOD / CHECK / REDO**, relabel failures, print a summary and verification advice.
 10. **Run again** — offer to re-run for the next batch.
 
 The safety guards that make it trustworthy to run:
@@ -141,7 +141,7 @@ The safety guards that make it trustworthy to run:
 - **Skips write-protected media.** Hardware-locked cards (e.g. a MegaVoice CSD write-protect) are detected and skipped rather than failing confusingly mid-run.
 - **Two-step human confirmation.** You see exactly what will be wiped, by size and volume name, and the summary dialog defaults to **Back**.
 - **Re-verifies disk identity right before erasing.** macOS reuses `diskN` numbers; immediately before each erase the script re-checks that the disk's exact byte size still matches and it is still external + physical, so a device swapped while the dialog was open can't misdirect the erase.
-- **Only copies to a correctly-formatted volume on the right device node.** After erasing, it copies only to a volume that carries the chosen label *and* resolves to the expected `/dev/diskNs1`; and before/after each `rsync` it re-confirms the mount still points at that device — so if a device vanishes and macOS leaves a stray `/Volumes/<name>` folder on the boot disk, nothing gets written to the internal drive.
+- **Only copies to a correctly-formatted volume on the right device node.** After erasing, it copies only to a volume that carries the chosen label *and* resolves to the expected `/dev/diskNs1`; and before/after each `rsync` it re-confirms the mount still points at that device. *During* the copy, the progress monitor re-checks the same identity every poll — if a device vanishes mid-copy it kills that transfer within seconds and removes any stray `/Volumes/<name>` folder left on the boot disk, so the payload never silently lands on the internal drive.
 - **Stall timeout.** A copy with zero write progress for 300 seconds is killed and marked `REDO`, so one dying device can't wedge the whole batch.
 - **Restores the one host setting it toggles.** It temporarily disables Finder's `.DS_Store`-on-USB writing during the run and puts the original value back on exit — your Mac is left exactly as it was found.
 
@@ -165,7 +165,7 @@ In practice the remaining bottleneck is shared USB-hub bandwidth, not the Mac or
 - **No network connections.** The script makes no network calls — no telemetry, analytics, or update checks; nothing is downloaded or phoned home. (The only URL anywhere in the file is the GNU license address in the header comment, which is never contacted.)
 - **Reads the Mac's computer name only for display.** It reads the computer name (`scutil --get ComputerName`) solely to reference it in on-screen guidance; nothing else is read from the host.
 - **Does not modify your source folder.** It reads the content folder and writes only to the external devices you select.
-- **Restores the one host setting it changes.** The only host setting it touches is the Finder `.DS_Store`-on-USB default, captured before the run and restored on exit. It also disables Spotlight indexing per target volume (`mdutil -i off`), which is not a host setting: the only artifact that leaves lives on the device, which is wiped the next time that device is erased.
+- **Restores the one host setting it changes.** The only host setting it touches is the Finder `.DS_Store`-on-USB default, captured before the run and restored on exit. It also disables Spotlight indexing per target volume (`mdutil -i off`), which is not a host setting: the only artifact it leaves lives on the device, and is wiped the next time that device is erased.
 
 ---
 

@@ -73,7 +73,7 @@
       <li><a href="#guards">Safety guards &amp; rationale</a></li>
       <li><a href="#concurrency">Concurrency &amp; performance</a></li>
       <li><a href="#junk">macOS junk handling</a></li>
-      <li><a href="#failure">Failure model &amp; verification</a></li>
+      <li><a href="#failure">Failure model &amp; operator verification</a></li>
       <li><a href="#privacy">Network &amp; privacy</a></li>
       <li><a href="#limits">Known limitations</a></li>
       <li><a href="#audit">Auditing notes</a></li>
@@ -106,7 +106,7 @@
       re-execs itself under <code>/bin/bash</code> if launched with <code>sh</code>/<code>zsh</code> or in POSIX mode.</li>
     <li><strong>External commands, all built into macOS:</strong> <code>diskutil</code>, <code>rsync</code>
       (Apple's openrsync), <code>osascript</code>, <code>dd</code>, <code>sync</code>, <code>mdutil</code>,
-      <code>dot_clean</code>, <code>xattr</code>, <code>defaults</code>, <code>scutil</code>, <code>df</code>,
+      <code>dot_clean</code>, <code>defaults</code>, <code>scutil</code>, <code>df</code>,
       <code>du</code>, <code>find</code>, <code>mktemp</code>, <code>pkill</code>, <code>sed</code>/<code>awk</code>.</li>
     <li><strong>No third-party software</strong> is installed or required. Nothing is downloaded.</li>
     <li><strong>No <code>sudo</code> / no root.</strong> All disk operations go through <code>diskutil</code>
@@ -140,14 +140,15 @@
       Cmd-click to deselect ones to keep), then an explicit “ERASE these / KEEP these” summary whose
       default button is <em>Back</em>.</li>
     <li><strong>Consent-gated side effects.</strong> Only after confirmation: disable Finder <code>.DS_Store</code>
-      writes to USB volumes, and strip extended attributes from the source.</li>
+      writes to USB volumes (the pre-run value is captured first and restored on exit — §9). The
+      source folder itself is never modified.</li>
     <li><strong>Erase (parallel).</strong> Each disk is re-verified (§5) then <code>eraseDisk</code>'d, with one retry.</li>
     <li><strong>Prepare &amp; verify.</strong> Mount each freshly erased volume; proceed only if its name is the
       chosen label and it resolves to the expected device node.</li>
     <li><strong>Copy (parallel).</strong> <code>rsync</code> the content to each verified volume, with
       before/after mount re-verification.</li>
     <li><strong>Scrub &amp; eject.</strong> Remove macOS junk that FAT can't avoid (§7), then eject (with retries).</li>
-    <li><strong>Results.</strong> Group every device into <span class="tag ok">OK</span>
+    <li><strong>Results.</strong> Group every device into <span class="tag ok">GOOD</span>
       <span class="tag check">CHECK</span> <span class="tag redo">REDO</span>; blink failed devices;
       always print device-verification advice.</li>
     <li><strong>Run again.</strong> Offer to restart for the next batch (re-execs the script).</li>
@@ -188,18 +189,18 @@
       <td>Copy only to a disk whose freshly mounted volume has the chosen label <em>and</em> whose mount resolves to <code>/dev/diskNs1</code>.</td>
       <td>If an erase silently failed, an old/foreign partition could otherwise be copied onto and reported OK.</td></tr>
     <tr><td>Copy-time mount re-verify (<code>ok_mount</code>)</td>
-      <td>Before and after <code>rsync</code>, confirm <code>df &lt;mount&gt;</code> is still <code>/dev/diskNs1</code>.</td>
+      <td>Before and after <code>rsync</code>, confirm <code>df &lt;mount&gt;</code> is still <code>/dev/diskNs1</code>; <em>during</em> the copy the progress monitor re-checks the same identity every poll and, after two consecutive misses (~4&nbsp;s), kills that transfer and removes any stray boot-disk folder the yank left behind.</td>
       <td>If a device vanishes, macOS can leave <code>/Volumes/&lt;name&gt;</code> as a plain folder on the <strong>boot disk</strong>; writing there would copy the payload onto the internal drive.</td></tr>
     <tr><td>Blink write guard</td>
       <td>The LED-blink loop re-checks <code>df == /dev/diskNs1</code> before <em>every</em> write, and only blinks volumes named as the current or <code>REDO</code> label.</td>
-      <td>The blink dialog asks the operator to unplug devices while they blink; without this guard a yanked device's ghost mountpoint would receive writes on the boot disk (same class as above).</td></tr>
+      <td>Devices are unplugged while the end-of-run dialog is up (the operator sorts them by light), and any hard-yank can leave a ghost mountpoint; without this guard the blink writes would land on the boot disk (same class as above).</td></tr>
     <tr><td>Consent-first side effect</td>
       <td>The one host setting it toggles (<code>DSDontWriteUSBStores</code>) is changed only after the erase
       is confirmed, and restored on exit (§9).</td>
       <td>A user who cancels leaves their Mac untouched.</td></tr>
     <tr><td>Stall timeout</td>
       <td>A copy with zero write progress for <code>STALL_LIMIT</code> (300&nbsp;s) is killed and marked <span class="tag redo">REDO</span>.</td>
-      <td>A dying USB stick can't wedge the whole batch.</td></tr>
+      <td>A dying device can't wedge the whole batch.</td></tr>
     <tr><td>Interrupt handling</td>
       <td><code>trap</code> on INT/TERM/HUP stops blink loops, kills jobs, and lists incomplete devices; an EXIT trap stops blinkers, removes the temp dir, and restores the host setting.</td>
       <td>Ctrl-C leaves a clear record of which devices must not be distributed; HUP covers a closed Terminal window.</td></tr>
@@ -226,7 +227,8 @@
     <code>dd</code> or Balena Etcher) writes the <em>entire image</em> — including empty space — to each
     device, and typically <em>reads it all back</em> to validate; a 2&nbsp;GB image can mean up to ~4&nbsp;GB
     of I/O per device. This tool instead does a plain <code>rsync</code> of just the real content
-    (≈1.6&nbsp;GB), with no image and no read-back verification pass. Three things compound the win:
+    (only your actual content — ≈1.6&nbsp;GB in the original deployment), with no image and no
+    read-back verification pass. Three things compound the win:
     <ul>
       <li><strong>Only real bytes move</strong> — the actual files, not a whole-disk image plus its slack,
         and no validation re-read.</li>
@@ -266,7 +268,8 @@
   <h2 id="failure">8. Failure model &amp; operator verification</h2>
   <p>Every device ends in exactly one bucket:</p>
   <ul>
-    <li><span class="tag ok">OK</span> — loaded and ejected (detached; safe to pull).</li>
+    <li><span class="tag ok">GOOD</span> — loaded and ejected (detached; safe to pull). (The internal
+      per-device status code is <code>OK</code>; the on-screen group is <strong>GOOD</strong>.)</li>
     <li><span class="tag check">CHECK</span> — content copied but something needs a human look (e.g. could
       not eject, so the device is still mounted; or unexpected junk survived the scrub).</li>
     <li><span class="tag redo">REDO</span> — not loaded; retry. Failed devices are renamed to volume label
@@ -287,7 +290,7 @@
   a re-run naturally shows only the still-connected failures.</p>
 
   <h2 id="privacy">9. Network &amp; privacy</h2>
-  <p>The script makes <strong>no network connections</strong> and contains no URLs, telemetry, analytics,
+  <p>The script makes <strong>no network connections</strong> and contains no telemetry, analytics,
   or update checks. It reads only the content folder and the attached disks, and writes only to the
   selected external devices. It reads the Mac's computer name (<code>scutil --get ComputerName</code>)
   solely to reference it in on-screen guidance.</p>

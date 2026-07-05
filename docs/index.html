@@ -171,7 +171,8 @@
 
     <li>
       <h3>Plug in the devices</h3>
-      <p>Plug in the USB hub with the devices to be loaded.</p>
+      <p>Plug in the USB hub with the devices to be loaded. (A <strong>powered</strong> hub is
+      best — bus power alone rarely runs many devices at once.)</p>
     </li>
 
     <li>
@@ -276,7 +277,7 @@
       green for devices that loaded, red for failures. At the end you get a
       <strong>RESULTS</strong> summary grouped into <span class="tag good">GOOD</span>
       <span class="tag check">CHECK</span> <span class="tag redo">REDO</span> (see below), and a
-      dialog asking <strong>Run again?</strong> — click it to do the next batch (or redo
+      dialog asking <strong>Run again?</strong> — click <strong>Run again</strong> to do the next batch (or redo
       failures), or <strong>Done</strong> to stop.</p>
       <figure>
         <img class="shot" src="images/08-progress.png" alt="Screenshot: the progress bar running in Terminal">
@@ -327,7 +328,7 @@
     <tr>
       <td><span class="tag check">CHECK</span></td>
       <td>The content copied fine, but something needs a look (for example it could not
-      eject — just unplug it by hand).</td>
+      eject — eject it in Finder, then unplug).</td>
     </tr>
     <tr>
       <td><span class="tag redo">REDO</span></td>
@@ -541,7 +542,7 @@
 
 <h3>MegaVoice</h3>
 
-<p>Solar/rechargeable audio-Bible players used widely in missions. <em>Not yet tested with this tool, but expected to work.</em> Connect MegaVoice's <strong>SLS data cable</strong> and the player's storage — its internal memory, plus the microSD card too if one is inserted — mounts on the Mac as an <strong>ordinary writable USB drive</strong>. From there the mechanism is the same one SaberCopy uses: wipe the volume and write the files in the right order (which this tool does). SaberCopy is smarter, more customizable and friendlier, but the underlying principle is identical — so as long as you match MegaVoice's folder structure, filenames, and supported formats, this tool should load it. (The microSD is <em>not</em> the main path — the cable is — and where a card is used it follows the same strict structure rules as the internal memory.)</p>
+<p>Solar/rechargeable audio-Bible players used widely in missions. <em>Not yet tested with this tool, but expected to work.</em> Connect MegaVoice's <strong>SLS data cable</strong> and — on the current-generation models (Envoy&nbsp;2, Companion/Shield, Herald) — the player's storage (its internal memory, plus the microSD card too if one is inserted) mounts on the Mac as an <strong>ordinary writable USB drive</strong>; the per-model table below flags the legacy models that are documented only for SaberCopy loading. From there the mechanism is the same one SaberCopy uses: wipe the volume and write the files in the right order (which this tool does). SaberCopy is smarter, more customizable and friendlier, but the underlying principle is identical — so as long as you match MegaVoice's folder structure, filenames, and supported formats, this tool should load it. (The microSD is <em>not</em> the main path — the cable is — and where a card is used it follows the same strict structure rules as the internal memory.)</p>
 
 <p>MegaVoice does <strong>not</strong> use one universal folder layout — <em>the required structure differs by model</em>, and every model plays files in <strong>name-sort order</strong>, so zero-padded numeric prefixes (<code>001</code>, <code>002</code>…) are what guarantee correct playback for a copy-in-sorted-order tool. The table below summarizes each family; see the <strong>Loading docs</strong> links for the authoritative manufacturer PDF.</p>
 <div class="callout warn"><strong>Envision is the key exception.</strong> It is the one model that even reads a copied folder tree from external microSD/USB-OTG, but external media <strong>requires MegaVoice's Windows encryption</strong> (adds a <code>$ME</code> token to each filename, e.g. <code>name$ME.mp4</code>). Plain, unencrypted files on a FAT32 card are <strong>skipped/ignored</strong> — Envision is <strong>not loadable</strong> with a plain FAT copy.</div>
@@ -711,7 +712,7 @@
 <p>Cheap, locally-available players that read directly from a microSD card or a USB thumb drive you insert. This is the tool's sweet spot: any card or stick that mounts as a writable FAT32 volume loads cleanly.</p>
 
 <ul>
-<li><strong>Loads via:</strong> the removable microSD in a USB reader, or the USB stick itself.</li>
+<li><strong>Loads via:</strong> the removable microSD in a USB reader, or the USB thumb drive itself.</li>
 <li><strong>Filesystem:</strong> FAT32 is near-universal. Some large cards ship exFAT and a minimal player may reject it — the tool reformats to FAT32, which resolves that. If a card's format is unclear, <a href="#fscheck">check it first</a>.</li>
 <li><strong>Folder structure &amp; filenames:</strong> firmware-dependent (often flat or shallow). Match your source tree to what your specific player expects; leading-zero numbering (001, 002…) is the safe cross-device convention.</li>
 <li><strong>Audio format:</strong> usually MP3; codec support varies by chipset.</li>

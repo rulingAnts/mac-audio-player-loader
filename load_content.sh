@@ -150,12 +150,15 @@ restore_dsusb() {
     *) defaults delete com.apple.desktopservices DSDontWriteUSBStores 2>/dev/null ;;  # was absent
   esac
 }
-# Single EXIT handler: remove the scratch dir and restore the Mac-side setting.
-# Runs on Done, on the dead-end exits, and on Ctrl-C — but NOT across the
-# run-again `exec` (exec does not fire EXIT traps), so the setting stays off
-# between batches and is restored only when the whole session finally ends
-# (i.e. after every device has been written and ejected).
+# Single EXIT handler: stop any LED-blink loops, remove the scratch dir, and
+# restore the Mac-side setting. Runs on Done, on the dead-end exits, and on
+# Ctrl-C / HUP — but NOT across the run-again `exec` (exec does not fire EXIT
+# traps), so the setting stays off between batches and is restored only when
+# the whole session finally ends (after every device is written and ejected).
+# stop_blink comes FIRST so no blinker can outlive the script and keep writing
+# to a device after we are gone.
 cleanup() {
+  stop_blink
   [ -n "${STATUS_DIR:-}" ] && rm -rf "$STATUS_DIR"
   restore_dsusb
 }
@@ -172,7 +175,13 @@ BLINK_PIDS=()
 BLINK_FLAG=""
 blink_one() {  # $1 = diskN, $2 = mount point, $3 = flag file
   local dev=$1 mp=$2 flag=$3 tmp="$2/.audioloader_blink"
-  while [ -f "$flag" ]; do
+  # Two stop conditions: the flag file (removed by stop_blink), AND the main
+  # script still being alive. Inside this background subshell $$ is still the
+  # MAIN script's PID (bash keeps $$ across subshells), so if the script dies
+  # without running its traps (force-quit, kill -9, closed window), the
+  # orphaned blinker notices within one iteration and stops on its own —
+  # devices must never keep blinking after the script is gone.
+  while [ -f "$flag" ] && kill -0 $$ 2>/dev/null; do
     if [ "$(df "$mp" 2>/dev/null | awk 'NR==2 {print $1}')" = "/dev/${dev}s1" ]; then
       dd if=/dev/zero of="$tmp" bs=64k count=64 2>/dev/null   # ~4 MB, small block avoids a no-op on a nearly-full volume
       sync
@@ -475,7 +484,7 @@ total_k=$(((payload_b + 1023) / 1024))
 STATUS_DIR=$(mktemp -d)
 
 on_interrupt() {
-  trap '' INT TERM                             # disarm so a second Ctrl-C can't re-enter this
+  trap '' INT TERM HUP                         # disarm so a second signal can't re-enter this
   printf '\n\nInterrupted!\n'
   stop_blink                                   # stop blink loops + their dd children first
   jobs -p 2>/dev/null | xargs kill 2>/dev/null
@@ -490,7 +499,10 @@ on_interrupt() {
   fi
   exit 130
 }
-trap on_interrupt INT TERM
+# HUP included: closing the Terminal window mid-run (or mid-dialog) must run
+# the same teardown — without it, bash dies without firing the EXIT trap and
+# the blink loops would be orphaned, still writing to devices.
+trap on_interrupt INT TERM HUP
 
 SECONDS=0   # bash builtin: seconds since this assignment — drives ETA, stall detection, total
 

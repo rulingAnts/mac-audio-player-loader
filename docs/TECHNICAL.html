@@ -201,8 +201,11 @@
       <td>A copy with zero write progress for <code>STALL_LIMIT</code> (300&nbsp;s) is killed and marked <span class="tag redo">REDO</span>.</td>
       <td>A dying USB stick can't wedge the whole batch.</td></tr>
     <tr><td>Interrupt handling</td>
-      <td><code>trap</code> on INT/TERM stops blink loops, kills jobs, and lists incomplete devices; an EXIT trap removes the temp dir.</td>
-      <td>Ctrl-C leaves a clear record of which devices must not be distributed.</td></tr>
+      <td><code>trap</code> on INT/TERM/HUP stops blink loops, kills jobs, and lists incomplete devices; an EXIT trap stops blinkers, removes the temp dir, and restores the host setting.</td>
+      <td>Ctrl-C leaves a clear record of which devices must not be distributed; HUP covers a closed Terminal window.</td></tr>
+    <tr><td>Blinkers cannot outlive the script</td>
+      <td>Each blink loop re-checks every iteration that the flag file exists <em>and</em> the main script's PID is still alive (<code>kill -0 $$</code>), exiting on its own otherwise.</td>
+      <td>Even a force-quit / <code>kill -9</code> (which fires no traps) cannot leave orphaned loops writing to devices after the script is gone.</td></tr>
     <tr><td>Label sanitization</td>
       <td>Alphanumeric only, uppercased, ≤11 chars.</td>
       <td>FAT stores labels uppercase; punctuation can be transformed by <code>diskutil</code>, which would break the post-erase name check.</td></tr>
@@ -214,8 +217,9 @@
   those files to drive the progress bar and the final grouping — there is no shared mutable state
   between workers. The LED-blink loops are background jobs governed by a flag file and stopped with
   <code>kill</code>/<code>pkill</code> (never an unbounded <code>wait</code>, so a device stuck in I/O
-  can't hang the script). ANSI colour is emitted only to a TTY and is kept out of the status files so
-  parsing stays clean.</p>
+  can't hang the script); each loop also re-checks every iteration that the main script's PID is still
+  alive, so no blinker can survive the script's exit — however it exits. ANSI colour is emitted only to
+  a TTY and is kept out of the status files so parsing stays clean.</p>
 
   <div class="callout ok">
     <strong>Why this is much faster than imaging a device.</strong> Restoring a disk image (e.g. with

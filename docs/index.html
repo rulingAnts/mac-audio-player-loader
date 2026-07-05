@@ -228,6 +228,18 @@
       (letters and numbers, up to 11).</p>
       <p style="color:#66707a"><small>💡 Tip: use a <strong>new, unused name each batch</strong> —
       it makes the after-the-run device check (see <em>Verify every device</em>, below) reliable.</small></p>
+      <p>Two more quick things follow:</p>
+      <ul>
+        <li><strong>File names on the devices</strong> — keep your original file names, or have every
+        audio file renamed to <strong>simple numbers</strong> (<code>001.mp3</code>, <code>002.mp3</code>, …)
+        in play order, restarting in each folder. Folder names stay, and your source files are never
+        touched. Choose <strong>Simple numbers</strong> if your player is picky about long names.</li>
+        <li><strong>Content check</strong> — if the loader spots things that often will not play
+        (audio sitting directly inside a top-level folder when a player expects an album sub-folder,
+        file types like <code>.m4a</code> that many players cannot decode, folders mixing numbered and
+        un-numbered names), a caution box lists them. Read it — then <strong>Load anyway</strong>, or
+        <strong>Cancel</strong> and fix the folder first.</li>
+      </ul>
       <figure>
         <img class="shot" src="images/04-label.png" alt="Screenshot: the volume-label dialog">
         <figcaption>The volume-label dialog</figcaption>
@@ -457,6 +469,12 @@
     <tr><td>Stopped with <kbd>Ctrl</kbd>+<kbd>C</kbd>?</td>
         <td>The script lists which devices are INCOMPLETE. Do not hand those out — run again
         to redo them.</td></tr>
+    <tr><td>A whole folder is silent on the player</td>
+        <td>Usually structure or format, not the copy: the audio may sit directly in a top-level
+        folder (players like KULUMI only play files inside an album sub-folder — add one, e.g.
+        <code>001 Misc</code>), or the files may be a type the player cannot decode
+        (<code>.m4a</code> → convert to MP3). The content-check box at the start of a run lists
+        exactly these problems.</td></tr>
     <tr><td>No disks listed</td>
         <td>Make sure the hub is connected and powered, and the devices are fully inserted.</td></tr>
     <tr><td>A red-icon alert pops up</td>
@@ -533,6 +551,14 @@
 <div class="callout"><strong>KULUMI Mini — confirmed working with this tool.</strong> The developer has tested and verified it. It loads over Hope Tech Global's <strong>red</strong> data cable as well as the green. Some Mini variants have a removable microSD card and some do not, but <strong>all variants load via the cable</strong>. The cleanest path is the open-slot version: pull the microSD, load it in a card reader, return it — no special cable needed.</div>
 
 <div class="callout info"><strong>Why the KULUMI folder order matters.</strong> Hope Tech Global's own loader notes that a KULUMI "plays back in the order that it was copied in" — copy order, not a firmware name-sort. That is exactly what this tool guarantees: it lays your files down onto a fresh volume in sorted name order, so copy order and play order match. Number your folders and tracks with leading zeros.</div>
+
+<div class="callout warn"><strong>Two KULUMI gotchas that make a whole folder silent.</strong> (1) Audio must sit
+<strong>inside an album sub-folder</strong> — files placed directly in a top-level category folder are skipped
+entirely by the firmware: a category with loose files plays <em>nothing</em>, while a sibling that uses
+sub-folders plays fine. Fix: move the loose files into a numbered sub-folder (e.g. <code>001 Misc</code>).
+(2) <strong>MP3 only</strong> — <code>.m4a</code>/AAC files are ignored even when placed correctly; convert them
+to MP3 first (the Music app's <em>“Create MP3 Version”</em> works). The loader's <strong>content check</strong>
+warns about both patterns before anything is erased.</div>
 
 <ul>
 <li><strong>KULUMI X:</strong> ~8 GB fixed storage (the maker calls it internal memory; an independent SIL review calls it an enclosed microSD — either way it is not user-removable, so there is no card-reader fallback). It should present as a FAT32 drive over the green/red data cable; confirm your first unit mounts writable on your Mac before a batch.</li>

@@ -38,6 +38,8 @@ Audio Player Loader is that native path. It uses **only what already ships on ev
 - **Parallel erase and copy across every device at once.** Each device gets its own background worker, so wall-clock time is roughly the slowest single device — not the sum of them all.
 - **Files copied in name order.** The tool enumerates your content itself and writes every folder and file **with its final name, in strict name-sorted order** — no temp files, no renames — so on the freshly formatted volume each FAT directory entry is created in play order, which is the order minimal player firmware follows. Numbered folders (`001 …`, `002 …`) are how you set that order. (It deliberately does *not* use `rsync`: openrsync's temp-file renames scramble FAT entry order — a bug caught on a real player and verified fixed at the raw-directory-table level.)
 - **Prevents and scrubs macOS junk.** Suppresses Finder's `.DS_Store` writing for the run, blocks Spotlight from ever indexing each volume (a `.metadata_never_index` marker — so no `.Spotlight-V100` is created), then removes the `.DS_Store` and `._*` AppleDouble sidecars macOS forces onto FAT. A finished device carries only two tiny hidden marker files that keep Macs from re-junking it.
+- **Content check before anything is erased.** Warns about the patterns that actually silence content on real players: audio placed directly in a top-level folder while siblings use album sub-folders, file types like `.m4a` many players can't decode, and folders mixing numbered/un-numbered names.
+- **Optional simple file names.** A per-run choice to write every audio file as `001.mp3`, `002.mp3`, … (per folder, in play order, extensions kept, folder names kept, source untouched) — for players that mishandle long or unusual names.
 - **Blinks the LED of failed devices.** In the graphical run-again dialog, devices that failed have their light blinked (by forced writes) so you can physically find them in a crowded hub.
 - **Renames failures to `REDO`.** Failed volumes are relabeled `REDO` and left connected, so they stand out in Finder and in the next run's list.
 - **"Run again" for the next batch.** An end-of-run dialog offers to restart for a fresh batch or to redo just the failures — since successful devices are ejected, a re-run naturally shows only the ones still connected.
@@ -124,7 +126,7 @@ For per-device folder structure, cabling, filesystem, audio format, and links to
 
 Each run proceeds top-to-bottom through a short sequence of phases; the erase and copy phases fan out one background worker per device for speed:
 
-1. **Label prompt** — ask for the FAT volume label (default `PLAYER`; sanitized to letters/digits, uppercased, ≤ 11 chars; `REDO` is reserved).
+1. **Label & options** — ask for the FAT volume label (default `PLAYER`; sanitized to letters/digits, uppercased, ≤ 11 chars; `REDO` is reserved), then the optional simple-numbers file-naming choice, and run the pre-erase content check.
 2. **Resolve the source disk** — figure out which physical disk holds the content folder so it can be protected.
 3. **Enumerate targets** — list external *physical* disks, skipping the source disk and any write-protected media; capture each disk's exact byte size.
 4. **Pick & confirm** — the two-dialog picker + "ERASE / KEEP" summary.

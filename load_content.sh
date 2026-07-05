@@ -289,6 +289,26 @@ if [ "$LABEL" = "$REDO_LABEL" ]; then
   exit 1
 fi
 
+# --- Optional: simple numeric file names on the devices -----------------
+# Some picky player firmware mishandles long or unusual file names. This
+# option renames every FILE on the TARGET devices to 3-digit numbers in play
+# order — 001.mp3, 002.mp3, … restarting in each folder, extension kept,
+# folder names kept, and the SOURCE folder never touched. Play order is
+# unchanged: numbering follows the same name-sort the copy already uses.
+SIMPLE_NAMES=0
+if [ "$use_gui" -eq 1 ]; then
+  btn=$(osascript -e 'on run {t}' \
+    -e 'button returned of (display dialog "File names on the devices:" & return & return & "KEEP NAMES — copy your file names as they are." & return & return & "SIMPLE NUMBERS — rename every audio file to 001.mp3, 002.mp3, … in play order (numbering restarts in each folder; folder names are kept). Safest for picky players. Your source files are never renamed." buttons {"Simple numbers", "Keep names"} default button "Keep names" with title t)' \
+    -e 'end run' "$APP_TITLE" 2>/dev/null) || { echo "Cancelled."; exit 0; }
+  [ "$btn" = "Simple numbers" ] && SIMPLE_NAMES=1
+elif [ -t 0 ]; then
+  printf 'Rename files on the devices to simple numbers (001.mp3, ...)? (y/N): '
+  read -r ans
+  case "$ans" in [Yy]*) SIMPLE_NAMES=1 ;; esac
+fi
+[ "$SIMPLE_NAMES" -eq 1 ] && echo "File names on devices: SIMPLE NUMBERS (001.mp3, 002.mp3, ...)" || echo "File names on devices: kept as-is"
+
+
 # --- Resolve our own real path (so a symlink to the script can't make ---
 # --- SRC point at the wrong folder) ----------------------------------
 SELF_PATH=$0
@@ -494,6 +514,57 @@ payload_b=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \
 total_k=$(((payload_b + 1023) / 1024))
 [ "$total_k" -gt 0 ] || total_k=1
 
+# ===== CONTENT CHECK (warnings only) ====================================
+# The tool is player-agnostic, so nothing here blocks a load — but these are
+# the patterns that make content SILENT on common players (learned the hard
+# way on a real KULUMI): audio files sitting directly in a top-level folder
+# when the player expects an album SUB-folder level; file types the firmware
+# cannot decode (e.g. .m4a on an MP3-only player); unnumbered names.
+warn=""
+# file types beyond mp3/wav/wma
+ext_counts=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
+  sed -n 's/.*\.\([A-Za-z0-9][A-Za-z0-9]*\)$/\1/p' | tr 'A-Z' 'a-z' |
+  awk '!/^(mp3|wav|wma)$/' | sort | uniq -c | awk '{printf "%d x .%s  ", $1, $2}')
+[ -n "$ext_counts" ] && warn="$warn• File types many players cannot play (may be silent/skipped): $ext_counts"$'\n'
+# loose audio at the volume's top level
+root_loose=$(cd "$SRC" && find . -mindepth 1 -maxdepth 1 -type f "${PAYLOAD_SKIP[@]}" -print | grep -c . )
+[ "$root_loose" -gt 0 ] && warn="$warn• $root_loose file(s) sit at the very top level, outside any folder — most players ignore these."$'\n'
+# mixed structure: some top-level folders hold files DIRECTLY, others use sub-folders
+flat=""; nested=""
+while IFS= read -r dtop; do
+  base=${dtop#./}
+  [ -n "$(cd "$SRC" && find "$dtop" -mindepth 1 -maxdepth 1 -type f "${PAYLOAD_SKIP[@]}" -print 2>/dev/null | head -1)" ] && flat="$flat\"$base\"  "
+  [ -n "$(cd "$SRC" && find "$dtop" -mindepth 2 -type f "${PAYLOAD_SKIP[@]}" -print 2>/dev/null | head -1)" ] && nested="$nested\"$base\"  "
+done < <(cd "$SRC" && find . -mindepth 1 -maxdepth 1 "${PAYLOAD_PRUNE[@]}" -o -type d -print)
+if [ -n "$flat" ] && [ -n "$nested" ]; then
+  warn="$warn• Audio placed DIRECTLY inside: $flat— but these use sub-folders: $nested. Players that only play audio inside an album sub-folder (e.g. KULUMI) will SKIP the direct ones. Move loose files into a numbered sub-folder (e.g. \"001 Misc\")."$'\n'
+fi
+# folders that MIX numbered and un-numbered file names (ordering intent is
+# unclear there; an ALL-un-numbered folder is left alone — alphabetical order
+# may well be intended, and the sort still makes it deterministic)
+mixnum=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
+  awk -F/ '{d=""; for(i=2;i<NF;i++) d=d "/" $i; if ($NF ~ /^[0-9]/) num[d]=1; else un[d]=1}
+           END {c=0; for (d in num) if (d in un) c++; print c+0}')
+[ "$mixnum" -gt 0 ] && warn="$warn• $mixnum folder(s) mix numbered and un-numbered file names — the un-numbered ones will sort unpredictably among the numbered ones."$'\n'
+longn=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print | awk -F/ 'length($NF) > 64' | grep -c .)
+[ "$longn" -gt 0 ] && warn="$warn• $longn file name(s) longer than 64 characters — fine for FAT, but some picky firmware mishandles very long names (the simple-numbers option avoids this)."$'\n'
+if [ -n "$warn" ]; then
+  echo
+  echo "${cYEL}${cB}CONTENT CHECK — things that may not play as intended:${cR}"
+  printf '%s' "$warn"
+  echo
+  if [ "$use_gui" -eq 1 ]; then
+    osascript -e 'on run {t, m}' \
+      -e 'display dialog m buttons {"Cancel", "Load anyway"} default button "Load anyway" with title t with icon caution' \
+      -e 'end run' "$APP_TITLE — content check" "$warn" >/dev/null 2>&1 || { echo "Cancelled at content check."; exit 0; }
+  elif [ -t 0 ]; then
+    printf 'Load anyway? (Y/n): '
+    read -r ans
+    case "$ans" in [Nn]*) echo "Cancelled."; exit 0 ;; esac
+  fi
+fi
+# ===== end CONTENT CHECK ================================================
+
 # Private scratch dir for the per-device status files (see the header block).
 # cleanup() (the EXIT trap installed at the top of MAIN FLOW) removes it however
 # the script ends — except across `exec` (the run-again path removes it by hand
@@ -636,16 +707,37 @@ for idx in "${!copy_devs[@]}"; do
     # cp -X skips xattr copying (the kernel still stamps provenance and
     # synthesizes ._ sidecars — the scrub below removes those); touch -r
     # preserves each file's modification time.
+    # SIMPLE_NAMES=1 renames each FILE to NNN.ext in play order. Counters are
+    # per-directory and looked up via parallel arrays (bash 3.2 has no
+    # associative arrays) because sorted paths do NOT keep one directory's
+    # files contiguous — a sub-folder can sort between them, and a naive
+    # "reset on directory change" would restart numbering and overwrite.
     if ( cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \
            \( -type f -o -type d \) "${PAYLOAD_SKIP[@]}" -print0 |
          LC_ALL=C sort -z |
-         while IFS= read -r -d '' p; do
-           if [ -d "$p" ]; then
-             mkdir "$mp/$p" || exit 1
-           else
-             { cp -X "$p" "$mp/$p" && touch -r "$p" "$mp/$p"; } || exit 1
-           fi
-         done ) 2>"$STATUS_DIR/$dev.err" && ok_mount; then
+         { sn_dirs=(); sn_counts=()
+           while IFS= read -r -d '' p; do
+             if [ -d "$p" ]; then
+               mkdir "$mp/$p" || exit 1
+             else
+               dest=$p
+               if [ "${SIMPLE_NAMES:-0}" -eq 1 ]; then
+                 pd=${p%/*}; pb=${p##*/}
+                 hit=-1
+                 for i in ${sn_dirs[@]+"${!sn_dirs[@]}"}; do
+                   if [ "${sn_dirs[i]}" = "$pd" ]; then hit=$i; break; fi
+                 done
+                 if [ "$hit" -ge 0 ]; then
+                   n=$(( ${sn_counts[hit]} + 1 )); sn_counts[hit]=$n
+                 else
+                   n=1; sn_dirs+=("$pd"); sn_counts+=(1)
+                 fi
+                 case "$pb" in *.*) ext=".${pb##*.}" ;; *) ext="" ;; esac
+                 dest="$pd/$(printf '%03d' "$n")$ext"
+               fi
+               { cp -X "$p" "$mp/$dest" && touch -r "$p" "$mp/$dest"; } || exit 1
+             fi
+           done; } ) 2>"$STATUS_DIR/$dev.err" && ok_mount; then
       # Scrub the junk macOS forces onto FAT. On modern macOS ._* sidecars
       # are synthesized for any file carrying com.apple.provenance (which
       # xattr -cr can't strip), so they CANNOT be prevented — only removed.

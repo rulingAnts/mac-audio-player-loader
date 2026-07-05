@@ -132,8 +132,15 @@
     <li><strong>Shell guard.</strong> Re-exec under <code>/bin/bash</code> if not already running there.</li>
     <li><strong>Volume label prompt.</strong> Asks for the FAT label (default <code>PLAYER</code>); input
       is sanitized to <code>[A-Za-z0-9]</code>, uppercased, truncated to 11 chars. <code>REDO</code> is reserved.</li>
+    <li><strong>File-name mode.</strong> Optional per-run choice: keep original file names, or rename
+      every file on the target to 3-digit numbers in play order (<code>001.mp3</code>…, restarting per
+      directory, extension preserved; folder names and the source are untouched).</li>
     <li><strong>Resolve source disk(s).</strong> Determines which physical disk(s) hold the content folder
       (walking APFS synthesized→physical) so they can never be erased.</li>
+    <li><strong>Content check (warnings only).</strong> Scans the payload for the patterns that silence
+      content on common players — audio directly inside a top-level folder while sibling folders use
+      sub-folders, non-MP3/WAV/WMA file types, folders mixing numbered/un-numbered names, 64+-character
+      names — and offers Cancel / Load anyway.</li>
     <li><strong>Enumerate targets.</strong> Lists external <em>physical</em> disks, skipping the source disk(s)
       and any write-protected (read-only) media. Captures each disk's exact byte size for later re-checks.</li>
     <li><strong>Pick &amp; confirm (two dialogs).</strong> A native list of whole disks (all preselected;
@@ -172,6 +179,12 @@
     affected source folder and verified by parsing the raw FAT directory tables: the ordered writer yields
     exact name-sorted entry order in every directory. Any substitute copy tool must create files with
     final names in sorted order — an <code>rsync</code>-style temp/rename strategy will corrupt play order.
+    <br><br>
+    With the optional <em>simple numbers</em> mode the write is unchanged — files stream in the same
+    sorted order — but each file is created under a per-directory 3-digit name. Directory entries
+    therefore still follow the original play order. (Edge case: where files and sub-folders are siblings
+    in one directory, a player that <em>name-sorts</em> instead of reading entry order will interleave
+    the renamed files and the folders differently than the original names did.)
   </div>
 
   <h2 id="guards">5. Safety guards &amp; rationale</h2>

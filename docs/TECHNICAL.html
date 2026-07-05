@@ -263,6 +263,19 @@
       may still appear; it is SIP-protected, tiny, harmless, and not treated as junk.</li>
     <li><code>.fseventsd/no_log</code> — the sanctioned marker that stops event logging; tiny, unavoidable, left in place.</li>
   </ul>
+  <div class="callout ok">
+    <strong>Why scrubbing (rather than preventing) the <code>._*</code> sidecars cannot affect play order.</strong>
+    Creation is unpreventable without root: the sidecar is materialized by the kernel's AppleDouble shim
+    because every new file is stamped with the <code>com.apple.provenance</code> xattr, which
+    <code>xattr&nbsp;-c</code> cannot clear (verified empirically). But deletion is truly clean at the FAT
+    level: parsing the raw directory table of a freshly loaded volume shows the content entries live and in
+    exact sorted order, with the scrubbed sidecars reduced to <code>0xE5</code>-marked <em>free slots</em>
+    between them. A free slot is not a file — the FAT specification requires every reader, minimal player
+    firmware included, to skip it (firmware that did not would fail on any disk that ever had a file
+    deleted, including Windows-prepared ones). Verified against real hardware: a device loaded and scrubbed
+    this way plays in correct order on a KULUMI Mini.
+  </div>
+
   <p>Net on each finished device: only <code>.metadata_never_index</code> and <code>.fseventsd/no_log</code> —
   two tiny hidden files, both purposeful (they keep Spotlight and fseventsd from writing anything bigger).
   The script does <strong>not</strong> set a read-only flag on the files (<code>chflags uchg</code> would

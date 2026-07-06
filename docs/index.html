@@ -260,17 +260,6 @@
         <figcaption>Pick the player these devices are for</figcaption>
       </figure>
         </li>
-        <li><strong>Write-order preview</strong> — files are written <strong>in filename order</strong>
-        (add <code>001</code>, <code>002</code>… prefixes to set the order). The final erase confirmation
-        restates this rule, and its <strong>Preview order…</strong> button opens a collapsible folder tree
-        in your browser showing exactly what will be written, in play order — original names alongside the
-        renamed device names when simple numbers is on. Expand/collapse any folder, or use the
-        <em>Expand all / Collapse all</em> buttons.
-      <figure>
-        <img class="shot"  src="images/15-preview-renamed.png" alt="Screenshot: the write-order preview page with simple numbers on, green renamed names beside the originals">
-        <figcaption>The preview with <strong>Simple numbers</strong> on: device names in green, your original names beside them</figcaption>
-      </figure>
-        </li>
         <li><strong>Content check</strong> — if the loader spots things that often will not play
         (audio sitting directly inside a top-level folder when a player expects an album sub-folder,
         file types like <code>.m4a</code> that many players cannot decode, empty folders, folders mixing
@@ -279,6 +268,10 @@
         sits</strong> in the tree, the specific reason written on the item, and every parent folder down
         to it flagged and pre-expanded. Read it — then <strong>Load anyway</strong>, or
         <strong>Cancel</strong> and fix the folder first.
+        <br><small>💡 Files are written to the devices <strong>in filename order</strong> — add
+        <code>001</code>, <code>002</code>… prefixes to set the play order. You can also open this
+        preview yourself, any run, from the final confirmation's <strong>Preview order…</strong>
+        button (step&nbsp;10 below).</small>
       <figure>
         <img class="shot"  src="images/13-content-check.png" alt="Screenshot: the content-check caution dialog listing flagged files with Cancel and Load anyway buttons">
         <figcaption>The content check names each problem file</figcaption>
@@ -322,12 +315,22 @@
       <p>A final message shows exactly which disks will be <strong>ERASED</strong> and
       which will be <strong>KEPT</strong>, and reminds you that files are written in
       <strong>filename order</strong>. Read it! Then click <strong>Erase &amp; Load</strong> —
-      or <strong>Preview order…</strong> to open the write-order tree in your browser first, or
+      or <strong>Preview order…</strong> to open the write-order preview in your browser first, or
       <strong>Back</strong> to change the selection (your choices are kept; pressing
       <kbd>Esc</kbd> also goes back, and the disk list's Cancel button aborts the run).</p>
+      <p><strong>Preview order…</strong> shows a collapsible folder tree of exactly what will be
+      written, top to bottom in play order — original names alongside the renamed device names when
+      <strong>Simple numbers</strong> is on. Expand or collapse any folder, or use the
+      <em>Expand all / Collapse all</em> buttons. (It is the same page that opens automatically when
+      the content check finds problems — one write manifest drives both the preview and the copy, so
+      what you preview is exactly what is written.)</p>
       <figure>
         <img class="shot"  src="images/07-confirm.png" alt="Screenshot: the final erase/keep confirmation dialog"
         <figcaption>Final confirmation — <strong>Preview order…</strong> opens the write-order tree</figcaption>
+      </figure>
+      <figure>
+        <img class="shot"  src="images/15-preview-renamed.png" alt="Screenshot: the write-order preview page with simple numbers on, green renamed names beside the originals">
+        <figcaption><strong>Preview order…</strong> opens this page — with <strong>Simple numbers</strong> on, device names are green, originals beside them</figcaption>
       </figure>
     </li>
 

@@ -1,11 +1,11 @@
 # HTG Mac Copy Tool — changes from v4 to v5
 
-Kulumi's v4 AppleScript (`htgmacv4.scpt`) hit the same field bug this project
-fixed on 2026-07-06: files play out of order on the device even though they
-are named with correct leading-zero prefixes. This document lists every edit
-made in v5 and the reason for each. Nothing else was changed.
+Kulumi's v4 AppleScript (`htgmacv4.scpt`) has the play-order bug this project
+fixed in its own loader on 2026-07-06: files play out of order on the device
+even when they are named with correct leading-zero prefixes. This document
+lists what v5 changes and why.
 
-## The bug v4 had
+## The bug v4 has
 
 FAT players play files in **raw FAT directory-entry order**, not name order.
 v4 already did the right first half — it built a name-sorted file list:
@@ -40,12 +40,13 @@ rsync -av --files-from="/tmp/htg_filelist.txt" "$SRC" "$TGT"
 ```sh
 while IFS= read -r p; do
   rel="${p#./}"
+  printf '%s\n' "$rel"
   if [ -d "$p" ]; then
     mkdir -p "$TGT/$rel" || { echo "FAILED creating folder: $rel"; exit 1; }
   else
     { cp -X "$p" "$TGT/$rel" && touch -r "$p" "$TGT/$rel"; } || { echo "FAILED copying: $rel"; exit 1; }
   fi
-done < /tmp/htg_filelist.txt
+done < "$LIST"
 ```
 
 **Why:** every folder and file is now created **with its final name, in list
@@ -53,9 +54,14 @@ order — no temp files, no renames** — so each FAT directory entry is
 allocated in exactly the play order the sorted list defines. `cp -X` skips
 extended attributes (fewer `._*` AppleDouble leftovers on the volume);
 `touch -r` preserves each file's modification time, which `rsync -a` used to
-do. Any failure aborts immediately with the offending path instead of
-rsync's continue-and-summarize behavior, so a half-written (and therefore
-wrongly-ordered) volume can't masquerade as success.
+do; the `printf` echoes each entry so the Terminal window shows the same
+live per-file progress `rsync -av` gave. Any failure aborts immediately with
+the offending path instead of rsync's continue-and-summarize behavior, so a
+half-written (and therefore wrongly-ordered) volume can't masquerade as
+success.
+
+**Never swap rsync/ditto/mv back into this loop** — any temp-file-and-rename
+copier re-scrambles the FAT entry order the loop exists to control.
 
 ## Change 2 — folders are enumerated and sorted too, not just files
 
@@ -76,7 +82,7 @@ sorts before `/`), so the folder `001 Foo Bar` would be created before
 
 **v4:** ` -not -name "X"` chained per pattern — this hid the excluded entry
 itself but still listed files *inside* excluded folders (e.g. files in
-`.Trashes` were copied by rsync, which silently created their parent dirs).
+`.Trashes` were copied, with rsync silently creating their parent dirs).
 
 **v5:** `\( -name "X" -o -name "Y" … \) -prune -o …` — an excluded folder is
 skipped *with its entire contents*.
@@ -91,58 +97,114 @@ nowhere to land. The exclude *patterns themselves are unchanged*.
 
 **Why:** plain `sort` obeys the machine's locale (e.g. `en_US.UTF-8`), which
 case-folds and skips punctuation — a different order than the byte order FAT
-players and this tool's own expectations use, and it varies from Mac to Mac.
-`LC_ALL=C` pins the sort to deterministic byte order, matching this repo's
-`load_content.sh`.
+players use, and it varies from Mac to Mac. `LC_ALL=C` pins the sort to
+deterministic byte order, matching this repo's `load_content.sh`.
 
-## Minor hardening (behavior-neutral)
+## Change 5 — the command runs as a script file, not as typed keystrokes
 
-- `cd "$SRC" || exit 1` — if the `cd` fails, abort instead of running the
-  writer against the wrong directory.
-- The target path is assigned once to a shell variable `TGT` instead of
-  being spliced into the loop three times (same value, fewer quoting traps).
-- Progress echoes reworded ("Entries to write" instead of "Files to copy")
-  since the list now counts folders too.
+**v4:** passed the whole multi-line shell command to Terminal's `do script`,
+which *types it into the user's interactive shell* (zsh by default on modern
+macOS).
+
+**v5:** writes the command to a private temp file and Terminal runs one
+short line: `/bin/bash <file>`.
+
+**Why:** an interactive shell parses typed text differently from a script —
+`#` is not a comment in interactive zsh (`INTERACTIVE_COMMENTS` is off by
+default), `!` history expansion is live, and the user's aliases apply (a
+common `alias cp='cp -i'` would stall a copy on overwrite prompts). v4's
+multi-line payload only survived this by luck of containing no hazardous
+characters; delivering a multi-line program as keystrokes is inherently
+fragile. Non-interactive `/bin/bash` running a file has none of those
+behaviors, and the `exit 1` error guards end the script rather than the
+user's terminal session. The file is written via AppleScript's
+`quoted form of` (byte-exact for any content) with CR line endings
+normalized to LF.
+
+## Change 6 — user-chosen paths pass through `quoted form of`
+
+**v4:** spliced raw paths into hand-rolled double quotes:
+`"rm -rf \"" & tgtPath & "\"/*"`, `rsync … "` & srcPath & `" "` & tgtPath & `"`.
+
+**v5:** every user path enters the shell via AppleScript's `quoted form of`
+and is referenced through shell variables (`"$SRC"`, `"$TGT"`).
+
+**Why:** inside shell double quotes, `$`, backticks, and `"` are live
+syntax, and all are legal in macOS folder names and FAT volume names.
+Concrete failures with v4-style splicing: a target volume named `MUSIC$2`
+silently expands to `/Volumes/MUSIC/` — the copy (and with NUKE, the
+**rm -rf**) hits a *different volume* and reports success; a folder named
+`12" Singles` re-tokenizes the whole command; a name containing `$(…)` or
+backticks executes it. `quoted form of` delivers any name literally.
+
+## Change 7 — NUKE also clears hidden dot-entries
+
+**v4:** `rm -rf "$TGT"/*`
+
+**v5:** `rm -rf "$TGT"/* "$TGT"/.[!.]* "$TGT"/..?*`
+
+**Why:** the shell glob `*` skips dot-names, so v4's nuke left `._*`
+AppleDouble files (the very junk the exclude list keeps off the device),
+`.DS_Store`, `.Spotlight-V100`, etc. on the "nuked" volume. Beyond hygiene,
+this matters for play order: leftover entries fragment the FAT directory,
+and first-fit allocation into the gaps between them can reorder the new
+entries (varied-length names need different numbers of contiguous LFN
+slots). Emptying the root completely is part of the order guarantee. The
+two extra globs cover dot-names without ever matching `.` or `..`, and
+`rm -f` exits 0 when a glob matches nothing.
+
+## Change 8 — private temp directory instead of a fixed `/tmp` name
+
+**v4:** hardcoded `/tmp/htg_filelist.txt` — world-writable, shared across
+all local users, so runs can collide and another local account can
+pre-create or symlink the path.
+
+**v5:** `mktemp -d /tmp/htg_copy.XXXXXX` gives each run its own 0700
+directory holding both the file list and the generated script.
 
 ## Deliberately NOT changed
 
-- The dialogs, button flow, NUKE + Copy countdown, and `rm -rf "$TGT"/*`
-  nuke behavior.
+- The dialogs, button flow, and NUKE + Copy countdown.
 - The exclude pattern list (same nine patterns).
-- The Terminal-window execution model (`runTerminal` handler).
-- The list file location (`/tmp/htg_filelist.txt`), `sync`, and the final
-  `diskutil unmount`.
+- The Terminal-window execution model (output still appears live in a
+  Terminal window) and the final `sync` + `diskutil unmount`.
 
-## Caveat that existed in v4 and still exists in v5
+## Caveat
 
-The order guarantee only holds for entries **created by this run** — a FAT
-entry that already exists on the target keeps whatever slot it had, and
+The order guarantee only holds for entries **created by this run into an
+empty directory** — a FAT entry that already exists keeps its slot, and
 overwriting a file in place does not move its entry. For guaranteed play
-order, load onto an empty volume (use **NUKE + Copy** or a freshly formatted
-device). Note `rm -rf "$TGT"/*` does not remove dot-entries (e.g.
-`.Spotlight-V100`); those occupy early directory slots but are invisible to
-the player. This matches v4's nuke behavior and was left as-is.
+order, load onto an empty volume: use **NUKE + Copy** (which now truly
+empties the root) or a freshly formatted device.
 
 ## Verification performed
 
-The exact shell block the AppleScript generates was reproduced verbatim and
-run against a test tree containing varied-length names, spaces, the
-`001 Foo` / `001 Foo Bar` prefix case, and populated excluded folders
-(`.Trashes`, `dir_nt`) — with files deliberately created on the source disk
-in non-alphabetical order:
+The exact shell text the AppleScript generates was reproduced verbatim
+(including the `quoted form of` delivery, for both LF and CR compiled string
+literals — byte-identical script file both ways) and exercised against test
+trees with varied-length names, spaces, the `001 Foo` / `001 Foo Bar` prefix
+case, populated excluded folders, and hostile path names
+(`Seth's 12" Mix $HOME `` `id` `` $(touch PWNED)`, `MUSIC$2`):
 
-- write list is strictly `LC_ALL=C`-sorted, folders included, and creation
-  follows it 1:1 (no temp names, no renames) ✅
-- source readdir order provably ignored ✅
+- creation follows the strictly `LC_ALL=C`-sorted list 1:1, folders
+  included; source readdir order provably ignored ✅
+- hostile characters in source/target paths are handled literally — correct
+  tree copied, no misdirected writes, no command execution ✅
 - all nine exclude patterns absent from list and target, including contents
   of excluded folders ✅
-- file contents and modification times preserved ✅
-- `bash -n` clean; runs identically under bash and strict-POSIX dash (so
-  macOS zsh, the default `do script` shell, is safe) ✅
+- file contents and modification times preserved; per-entry progress printed ✅
+- NUKE leaves the target completely empty (dot-entries included) and exits
+  cleanly on an already-empty target ✅
+- the single line handed to Terminal runs correctly in an interactive zsh
+  configured with hostile aliases (`cp='cp -i'`, sabotaged `mkdir`/`find`);
+  payload also passes under bash and strict-POSIX dash ✅
+- separately, the first-fit reorder mechanism was reproduced on a real FAT
+  filesystem image, confirming both the rsync failure mode and that leftover
+  directory entries can reorder subsequent writes ✅
 
-Not yet verified on real hardware: a raw-FAT-table read of a device loaded
-by v5 (this environment has no macOS/FAT volume). The mechanism is identical
-to the one already proven for `load_content.sh` on 2026-07-06.
+Not verified here: a raw-FAT-table read of a device loaded by v5 on real
+hardware (this environment has no macOS). The write mechanism is identical
+to the one proven on-device for this repo's `load_content.sh`.
 
 ## Using the new file
 

@@ -211,3 +211,32 @@ to the one proven on-device for this repo's `load_content.sh`.
 `htg_mac_copy_tool_v5.applescript` is plain-text AppleScript source. Open it
 in Script Editor and run it directly, or File → Export → File Format:
 "Script" to produce a compiled `.scpt` like the original.
+
+## Distribution note: keep shipping a script, not an app
+
+A downloaded `.scpt`/`.applescript` is a *document* — it opens in Script
+Editor (Apple's own signed app) with **no Gatekeeper dialog**, quarantine
+flag or not, and nothing in this tool needs Full Disk Access or an admin
+password. First-run friction is just two or three one-time permission
+prompts, remembered afterwards:
+
+1. "Script Editor.app would like to control Terminal.app" (Automation) —
+   comes from the `tell application "Terminal"` block, same as v4. If a user
+   clicks Don't Allow, the script aborts with error -1743; the switch to
+   re-enable it is in System Settings → Privacy & Security → Automation —
+   worth a line in the user instructions.
+2. "Terminal would like to access files in your Desktop folder" (or
+   Documents/Downloads) — only if the source folder lives there.
+3. "Terminal would like to access files on a removable volume" — first
+   write to the player.
+
+**The trap:** exporting this as a double-clickable applet (File → Export →
+Application) and distributing that `.app` **unsigned** hits Gatekeeper hard
+on modern macOS (Sequoia): "Apple could not verify this app is free of
+malware," and the old right-click → Open bypass no longer works — users
+must find System Settings → Privacy & Security → "Open Anyway", which is
+more friction than every prompt above combined. Ship an applet only if it
+is signed with a Developer ID **and notarized** (requires an Apple
+Developer account); otherwise distribute the script form with a one-line
+instruction — *open in Script Editor, press Run, click Allow on the
+first-run prompts*.

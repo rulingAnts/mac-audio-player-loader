@@ -137,10 +137,14 @@
       directory, extension preserved; folder names and the source are untouched).</li>
     <li><strong>Resolve source disk(s).</strong> Determines which physical disk(s) hold the content folder
       (walking APFS synthesized→physical) so they can never be erased.</li>
-    <li><strong>Content check (warnings only).</strong> Scans the payload for the patterns that silence
-      content on common players — audio directly inside a top-level folder while sibling folders use
-      sub-folders, non-MP3/WAV/WMA file types, folders mixing numbered/un-numbered names, 64+-character
-      names — and offers Cancel / Load anyway.</li>
+    <li><strong>Target-player selection.</strong> The operator picks the player model (from the documented
+      families in the operator guide) or “Other / not sure”. Encrypted-only players (MegaVoice Envision,
+      Davar/Kivah Audibible) are refused with an explanation, before anything is touched.</li>
+    <li><strong>Content check (profile-aware, warnings only).</strong> Validates the payload against the
+      selected player's documented rules — playable file types, the folder depth audio is read from,
+      documented folder-naming and name-length rules — plus generic checks (loose root files, mixed
+      numbered/un-numbered names, inconsistent structure). Warnings offer Cancel / Load anyway; nothing
+      blocks, since firmware revisions vary.</li>
     <li><strong>Enumerate targets.</strong> Lists external <em>physical</em> disks, skipping the source disk(s)
       and any write-protected (read-only) media. Captures each disk's exact byte size for later re-checks.</li>
     <li><strong>Pick &amp; confirm (two dialogs).</strong> A native list of whole disks (all preselected;

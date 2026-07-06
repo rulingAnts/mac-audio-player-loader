@@ -228,8 +228,13 @@
       (letters and numbers, up to 11).</p>
       <p style="color:#66707a"><small>💡 Tip: use a <strong>new, unused name each batch</strong> —
       it makes the after-the-run device check (see <em>Verify every device</em>, below) reliable.</small></p>
-      <p>Two more quick things follow:</p>
+      <p>A few more quick questions follow:</p>
       <ul>
+        <li><strong>Which player?</strong> — pick your player model from a list. The loader then checks
+        your content against <em>that player's</em> documented rules (folder depth, file types, naming)
+        before anything is erased. Pick <strong>Other / not sure</strong> for generic checks only.
+        Choosing a player this tool cannot load (encrypted-only models like the MegaVoice Envision or
+        Davar/Kivah Audibible) explains why and stops safely.</li>
         <li><strong>File names on the devices</strong> — keep your original file names, or have every
         audio file renamed to <strong>simple numbers</strong> (<code>001.mp3</code>, <code>002.mp3</code>, …)
         in play order, restarting in each folder. Folder names stay, and your source files are never
@@ -514,6 +519,11 @@
 <p>The loader tool itself is <strong>player-agnostic</strong>. It makes a clean, full-size FAT32 volume on each device you select and copies your numbered folders onto it in play order. It does not know or care what brand of player you own. This tab is about matching <em>your source folder and your hardware</em> to <em>your specific player</em> — the folder layout, the filenames, the audio format, and the cable or card reader that particular family expects.</p>
 
 <p>The author is actively expanding the list of tested players. Where a family below is marked <strong>not yet tested</strong>, that is an invitation to try it, not a verdict against it: it will very likely work as long as you set up the source folder structure, filenames, and audio format the way that player expects. As a rule of thumb, the author expects this tool to load essentially any device that GRN/MegaVoice's <strong>SaberCopy</strong> can load, given the right folder structure and format.</p>
+
+<p>The loader itself uses this research: at the start of each run it asks <strong>which player</strong>
+you are loading and checks your content folder against that player's documented rules before anything
+is erased — and if you pick one of the encrypted-only models below, it explains why no plain file
+copier can load it and stops.</p>
 
 <h2>Will my player work?</h2>
 

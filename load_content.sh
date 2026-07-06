@@ -308,6 +308,82 @@ elif [ -t 0 ]; then
 fi
 [ "$SIMPLE_NAMES" -eq 1 ] && echo "File names on devices: SIMPLE NUMBERS (001.mp3, 002.mp3, ...)" || echo "File names on devices: kept as-is"
 
+# --- Which player is this content for? ----------------------------------
+# The loader is player-agnostic, but the CONTENT CHECK below is far more
+# useful when it knows the target player's documented rules (sourced from the
+# per-player research in the operator guide's Player-Specific Setup tab).
+# "Other / not sure" applies only generic, lowest-common-denominator checks.
+# Two documented players play ONLY the maker's encrypted bundles — no plain
+# file copier can load them — so selecting one explains that and stops here,
+# before anything is touched.
+PLAYER_PROFILE="Other / not sure"
+if [ "$use_gui" -eq 1 ]; then
+  PLAYER_PROFILE=$(osascript -e 'on run {t}' \
+    -e 'set sel to choose from list {"KULUMI X or Mini", "KULUMI Sheep", "MegaVoice Envoy 2 S Series", "MegaVoice Envoy 2 E Series", "MegaVoice Companion or Shield", "MegaVoice Herald", "GRN Saber", "Generic MP3 player", "Other / not sure", "MegaVoice Envision (NOT loadable - encrypted)", "Davar / Kivah Audibible (NOT loadable - encrypted)"} with title t with prompt "Which player will these devices be used in?" & return & "(Used to check your content against that player'"'"'s documented rules before anything is erased.)" default items {"Other / not sure"}' \
+    -e 'if sel is false then error number -128' \
+    -e 'item 1 of sel' -e 'end run' "$APP_TITLE" 2>/dev/null) || { echo "Cancelled."; exit 0; }
+elif [ -t 0 ]; then
+  echo "Which player will these devices be used in?"
+  n=0
+  while IFS= read -r line; do n=$((n+1)); printf '  %2d) %s\n' "$n" "$line"; done <<'CHOICES'
+KULUMI X or Mini
+KULUMI Sheep
+MegaVoice Envoy 2 S Series
+MegaVoice Envoy 2 E Series
+MegaVoice Companion or Shield
+MegaVoice Herald
+GRN Saber
+Generic MP3 player
+Other / not sure
+MegaVoice Envision (NOT loadable - encrypted)
+Davar / Kivah Audibible (NOT loadable - encrypted)
+CHOICES
+  printf 'Number [9 = Other / not sure]: '
+  read -r ans
+  case "$ans" in *[!0-9]* | '') ans=9 ;; esac
+  sel=$(sed -n "${ans}p" <<'CHOICES'
+KULUMI X or Mini
+KULUMI Sheep
+MegaVoice Envoy 2 S Series
+MegaVoice Envoy 2 E Series
+MegaVoice Companion or Shield
+MegaVoice Herald
+GRN Saber
+Generic MP3 player
+Other / not sure
+MegaVoice Envision (NOT loadable - encrypted)
+Davar / Kivah Audibible (NOT loadable - encrypted)
+CHOICES
+)
+  [ -n "$sel" ] && PLAYER_PROFILE=$sel
+fi
+echo "Target player: $PLAYER_PROFILE"
+case "$PLAYER_PROFILE" in
+  *"NOT loadable"*)
+    msg="$PLAYER_PROFILE plays only content packaged and encrypted by the manufacturer's own software — plain copied files are ignored by its firmware, so this tool cannot prepare devices for it. Use the manufacturer's own loader instead. Nothing was erased."
+    echo "$msg"
+    gui_alert "$APP_TITLE" "$msg"
+    exit 0 ;;
+esac
+# Documented rules per player (from the Player-Specific Setup research):
+#   P_FORMATS = audio types the player is documented to play (extensions)
+#   P_DEPTHS  = folder depths (components under the content root) audio is
+#               read from, e.g. "3" = category/album/file.mp3; "" = any
+#   P_DIRNUM  = folder-name rule: bare3 (exactly 3 digits) | prefix3 (starts
+#               with 3 digits) | prefix (starts with a digit) | "" (none)
+#   P_MAXNAME = documented per-name length limit (0 = none documented)
+case "$PLAYER_PROFILE" in
+  "KULUMI X or Mini")              P_FORMATS="mp3";                          P_DEPTHS="3";       P_DIRNUM="";        P_MAXNAME=0 ;;
+  "KULUMI Sheep")                  P_FORMATS="mp3";                          P_DEPTHS="2";       P_DIRNUM="";        P_MAXNAME=0 ;;
+  "MegaVoice Envoy 2 S Series")    P_FORMATS="mp3 wav wma";                  P_DEPTHS="4";       P_DIRNUM="bare3";   P_MAXNAME=0 ;;
+  "MegaVoice Envoy 2 E Series")    P_FORMATS="mp3";                          P_DEPTHS="1 2 3 4"; P_DIRNUM="prefix3"; P_MAXNAME=0 ;;
+  "MegaVoice Companion or Shield") P_FORMATS="mp3 wav wma aac flac ogg ape"; P_DEPTHS="1 2 3 4"; P_DIRNUM="prefix3"; P_MAXNAME=63 ;;
+  "MegaVoice Herald")              P_FORMATS="mp3 wav wma";                  P_DEPTHS="1 2 3";   P_DIRNUM="";        P_MAXNAME=0 ;;
+  "GRN Saber")                     P_FORMATS="mp3";                          P_DEPTHS="";        P_DIRNUM="";        P_MAXNAME=0 ;;
+  "Generic MP3 player")            P_FORMATS="mp3";                          P_DEPTHS="";        P_DIRNUM="";        P_MAXNAME=0 ;;
+  *)                               P_FORMATS="mp3 wav wma";                  P_DEPTHS="";        P_DIRNUM="";        P_MAXNAME=64 ;;
+esac
+
 
 # --- Resolve our own real path (so a symlink to the script can't make ---
 # --- SRC point at the wrong folder) ----------------------------------
@@ -514,54 +590,85 @@ payload_b=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \
 total_k=$(((payload_b + 1023) / 1024))
 [ "$total_k" -gt 0 ] || total_k=1
 
-# ===== CONTENT CHECK (warnings only) ====================================
-# The tool is player-agnostic, so nothing here blocks a load — but these are
-# the patterns that make content SILENT on common players (learned the hard
-# way on a real KULUMI): audio files sitting directly in a top-level folder
-# when the player expects an album SUB-folder level; file types the firmware
-# cannot decode (e.g. .m4a on an MP3-only player); unnumbered names.
+# ===== CONTENT CHECK (profile-aware, warnings only) =====================
+# Validates the payload against the SELECTED PLAYER's documented rules before
+# anything is erased. Warnings never block (specs vary, firmware revisions
+# differ) — the operator reads them and picks Load anyway / Cancel. With
+# "Other / not sure" only generic lowest-common-denominator checks run.
 warn=""
-# file types beyond mp3/wav/wma
+plabel="many players"
+case "$PLAYER_PROFILE" in "Other / not sure") ;; *) plabel="the $PLAYER_PROFILE" ;; esac
+# 1. audio types the selected player is not documented to play
+fmt_re=$(printf '%s' "$P_FORMATS" | tr ' ' '|')
 ext_counts=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
   sed -n 's/.*\.\([A-Za-z0-9][A-Za-z0-9]*\)$/\1/p' | tr 'A-Z' 'a-z' |
-  awk '!/^(mp3|wav|wma)$/' | sort | uniq -c | awk '{printf "%d x .%s  ", $1, $2}')
-[ -n "$ext_counts" ] && warn="$warn• File types many players cannot play (may be silent/skipped): $ext_counts"$'\n'
-# loose audio at the volume's top level
-root_loose=$(cd "$SRC" && find . -mindepth 1 -maxdepth 1 -type f "${PAYLOAD_SKIP[@]}" -print | grep -c . )
+  awk -v re="^(${fmt_re})$" '$0 !~ re' | sort | uniq -c | awk '{printf "%d x .%s  ", $1, $2}')
+[ -n "$ext_counts" ] && warn="$warn• File types $plabel cannot play (will be silent/skipped): $ext_counts"$'\n'
+# 2. loose audio at the volume's top level
+root_loose=$(cd "$SRC" && find . -mindepth 1 -maxdepth 1 -type f "${PAYLOAD_SKIP[@]}" -print | grep -c .)
 [ "$root_loose" -gt 0 ] && warn="$warn• $root_loose file(s) sit at the very top level, outside any folder — most players ignore these."$'\n'
-# mixed structure: some top-level folders hold files DIRECTLY, others use sub-folders
-flat=""; nested=""
-while IFS= read -r dtop; do
-  base=${dtop#./}
-  [ -n "$(cd "$SRC" && find "$dtop" -mindepth 1 -maxdepth 1 -type f "${PAYLOAD_SKIP[@]}" -print 2>/dev/null | head -1)" ] && flat="$flat\"$base\"  "
-  [ -n "$(cd "$SRC" && find "$dtop" -mindepth 2 -type f "${PAYLOAD_SKIP[@]}" -print 2>/dev/null | head -1)" ] && nested="$nested\"$base\"  "
-done < <(cd "$SRC" && find . -mindepth 1 -maxdepth 1 "${PAYLOAD_PRUNE[@]}" -o -type d -print)
-if [ -n "$flat" ] && [ -n "$nested" ]; then
-  warn="$warn• Audio placed DIRECTLY inside: $flat— but these use sub-folders: $nested. Players that only play audio inside an album sub-folder (e.g. KULUMI) will SKIP the direct ones. Move loose files into a numbered sub-folder (e.g. \"001 Misc\")."$'\n'
+# 3. folder depth vs the player's documented structure
+if [ -n "$P_DEPTHS" ]; then
+  bad_depth=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
+    awk -F/ -v ok=" $P_DEPTHS " '{d = NF - 1; if (index(ok, " " d " ") == 0) print}')
+  if [ -n "$bad_depth" ]; then
+    nbd=$(printf '%s\n' "$bad_depth" | grep -c .)
+    ex=$(printf '%s\n' "$bad_depth" | head -1 | sed 's|^\./||')
+    warn="$warn• $nbd file(s) at a folder depth $plabel does not read audio from — it plays files $P_DEPTHS folder level(s) below the content root (e.g. \"$ex\"). These will be SKIPPED; move them into the expected level (e.g. a numbered sub-folder)."$'\n'
+  fi
+else
+  # no documented depth for this profile — generic signal instead: some top
+  # folders hold audio directly while siblings use sub-folders (the classic
+  # silent-folder cause)
+  flat=""; nested=""
+  while IFS= read -r dtop; do
+    base=${dtop#./}
+    [ -n "$(cd "$SRC" && find "$dtop" -mindepth 1 -maxdepth 1 -type f "${PAYLOAD_SKIP[@]}" -print 2>/dev/null | head -1)" ] && flat="$flat\"$base\"  "
+    [ -n "$(cd "$SRC" && find "$dtop" -mindepth 2 -type f "${PAYLOAD_SKIP[@]}" -print 2>/dev/null | head -1)" ] && nested="$nested\"$base\"  "
+  done < <(cd "$SRC" && find . -mindepth 1 -maxdepth 1 "${PAYLOAD_PRUNE[@]}" -o -type d -print)
+  if [ -n "$flat" ] && [ -n "$nested" ]; then
+    warn="$warn• Audio placed DIRECTLY inside: $flat— but these use sub-folders: $nested. Players that read audio at only one folder depth will skip one of the two styles; make the structure consistent."$'\n'
+  fi
 fi
-# folders that MIX numbered and un-numbered file names (ordering intent is
-# unclear there; an ALL-un-numbered folder is left alone — alphabetical order
-# may well be intended, and the sort still makes it deterministic)
-mixnum=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
-  awk -F/ '{d=""; for(i=2;i<NF;i++) d=d "/" $i; if ($NF ~ /^[0-9]/) num[d]=1; else un[d]=1}
-           END {c=0; for (d in num) if (d in un) c++; print c+0}')
-[ "$mixnum" -gt 0 ] && warn="$warn• $mixnum folder(s) mix numbered and un-numbered file names — the un-numbered ones will sort unpredictably among the numbered ones."$'\n'
-longn=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print | awk -F/ 'length($NF) > 64' | grep -c .)
-[ "$longn" -gt 0 ] && warn="$warn• $longn file name(s) longer than 64 characters — fine for FAT, but some picky firmware mishandles very long names (the simple-numbers option avoids this)."$'\n'
+# 4. folder-name rule
+if [ -n "$P_DIRNUM" ]; then
+  case "$P_DIRNUM" in
+    bare3)   dre='^[0-9][0-9][0-9]$'; drule="exactly 3 digits (001, 002, …)" ;;
+    prefix3) dre='^[0-9][0-9][0-9]';  drule="a 3-digit numeric prefix (001…, 002-Name)" ;;
+    *)       dre='^[0-9]';            drule="a leading number" ;;
+  esac
+  bad_dirs=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type d -print |
+    awk -F/ -v re="$dre" '$NF !~ re' | grep -c .)
+  [ "$bad_dirs" -gt 0 ] && warn="$warn• $bad_dirs folder name(s) do not follow the documented naming rule for $plabel ($drule) — they may sort or play out of order."$'\n'
+fi
+# 5. file-name checks — moot when files are being renamed to simple numbers
+if [ "$SIMPLE_NAMES" -ne 1 ]; then
+  mixnum=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
+    awk -F/ '{d=""; for(i=2;i<NF;i++) d=d "/" $i; if ($NF ~ /^[0-9]/) num[d]=1; else un[d]=1}
+             END {c=0; for (d in num) if (d in un) c++; print c+0}')
+  [ "$mixnum" -gt 0 ] && warn="$warn• $mixnum folder(s) mix numbered and un-numbered file names — the un-numbered ones will sort unpredictably among the numbered ones (the simple-numbers option would fix the names, not the order)."$'\n'
+  if [ "$P_MAXNAME" -gt 0 ]; then
+    longn=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
+      awk -F/ -v m="$P_MAXNAME" 'length($NF) > m' | grep -c .)
+    [ "$longn" -gt 0 ] && warn="$warn• $longn file name(s) longer than $P_MAXNAME characters — $plabel may truncate or mishandle them (the simple-numbers option avoids this)."$'\n'
+  fi
+fi
 if [ -n "$warn" ]; then
   echo
-  echo "${cYEL}${cB}CONTENT CHECK — things that may not play as intended:${cR}"
+  echo "${cYEL}${cB}CONTENT CHECK ($PLAYER_PROFILE) — may not play as intended:${cR}"
   printf '%s' "$warn"
   echo
   if [ "$use_gui" -eq 1 ]; then
     osascript -e 'on run {t, m}' \
       -e 'display dialog m buttons {"Cancel", "Load anyway"} default button "Load anyway" with title t with icon caution' \
-      -e 'end run' "$APP_TITLE — content check" "$warn" >/dev/null 2>&1 || { echo "Cancelled at content check."; exit 0; }
+      -e 'end run' "$APP_TITLE — content check: $PLAYER_PROFILE" "$warn" >/dev/null 2>&1 || { echo "Cancelled at content check."; exit 0; }
   elif [ -t 0 ]; then
     printf 'Load anyway? (Y/n): '
     read -r ans
     case "$ans" in [Nn]*) echo "Cancelled."; exit 0 ;; esac
   fi
+else
+  echo "Content check ($PLAYER_PROFILE): no issues found."
 fi
 # ===== end CONTENT CHECK ================================================
 

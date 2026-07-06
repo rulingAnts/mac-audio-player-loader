@@ -141,17 +141,33 @@ backticks executes it. `quoted form of` delivers any name literally.
 
 **v4:** `rm -rf "$TGT"/*`
 
-**v5:** `rm -rf "$TGT"/* "$TGT"/.[!.]* "$TGT"/..?*`
+**v5:**
+```sh
+rm -rf "$TGT"/* "$TGT"/.[!.]* "$TGT"/..?* 2>/dev/null
+ls -A "$TGT" | grep -vxE '[.](Spotlight-V100|fseventsd|Trashes|TemporaryItems|DS_Store)'
+```
+(anything that second line prints makes the script stop with an error
+dialog instead of copying)
 
 **Why:** the shell glob `*` skips dot-names, so v4's nuke left `._*`
 AppleDouble files (the very junk the exclude list keeps off the device),
-`.DS_Store`, `.Spotlight-V100`, etc. on the "nuked" volume. Beyond hygiene,
-this matters for play order: leftover entries fragment the FAT directory,
-and first-fit allocation into the gaps between them can reorder the new
-entries (varied-length names need different numbers of contiguous LFN
-slots). Emptying the root completely is part of the order guarantee. The
-two extra globs cover dot-names without ever matching `.` or `..`, and
+`.DS_Store`, etc. on the "nuked" volume. Beyond hygiene, this matters for
+play order: leftover entries fragment the FAT directory, and first-fit
+allocation into the gaps between them can reorder the new entries
+(varied-length names need different numbers of contiguous LFN slots).
+Emptying the root as completely as possible is part of the order guarantee.
+The two extra globs cover dot-names without ever matching `.` or `..`, and
 `rm -f` exits 0 when a glob matches nothing.
+
+The `rm` must tolerate individual failures (`2>/dev/null`) because macOS
+SIP protects Spotlight's `.Spotlight-V100` index on external volumes —
+`rm: .Spotlight-V100: Operation not permitted` happens even with sudo, and
+`.fseventsd`/`.DS_Store` can be recreated by macOS at any moment. Those
+system entries are invisible to players and tolerated by the follow-up
+check; anything *else* surviving the nuke means a half-erased volume, and
+the script stops rather than copy onto it. (For a byte-perfect baseline —
+no surviving system entries at all — reformat the volume in Disk Utility
+instead of nuking.)
 
 ## Change 8 — private temp directory instead of a fixed `/tmp` name
 
@@ -193,8 +209,11 @@ case, populated excluded folders, and hostile path names
 - all nine exclude patterns absent from list and target, including contents
   of excluded folders ✅
 - file contents and modification times preserved; per-entry progress printed ✅
-- NUKE leaves the target completely empty (dot-entries included) and exits
-  cleanly on an already-empty target ✅
+- NUKE removes everything removable (dot-entries included) and exits
+  cleanly on an already-empty target; with an undeletable SIP-protected
+  `.Spotlight-V100` present (simulated with an immutable file returning the
+  same "Operation not permitted") it proceeds, while an undeletable *content*
+  file is detected and stops the run ✅
 - the single line handed to Terminal runs correctly in an interactive zsh
   configured with hostile aliases (`cp='cp -i'`, sabotaged `mkdir`/`find`);
   payload also passes under bash and strict-POSIX dash ✅

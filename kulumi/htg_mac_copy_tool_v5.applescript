@@ -31,6 +31,9 @@
 --   * The order guarantee needs an EMPTY target: use NUKE + Copy, or a
 --     freshly formatted volume. Entries that already exist keep their
 --     directory slots, and overwriting a file does not move its entry.
+--     (NUKE tolerates the SIP-protected .Spotlight-V100 index, which
+--     macOS will not let anyone delete; a fresh format is the cleanest
+--     possible baseline.)
 property excludeList : {".Spotlight-V100", ".Trashes", "._*", "MAC_Exclude.txt", "*.CMD", "*.sh", "System Volume Information", ".TemporaryItems", "dir_nt"}
 
 on run
@@ -67,17 +70,33 @@ Proceed?"
 
 	-- Nuke mode. Hidden entries are removed too: the sh glob * skips
 	-- dot-names, so ._* AppleDouble files (the very junk the exclude list
-	-- keeps off the device) and .DS_Store/.Spotlight-V100 would survive a
-	-- plain "$TGT"/* — and leftover entries fragment the FAT directory, so
-	-- first-fit allocation into the gaps can reorder the new entries.
-	-- Emptying the root completely is part of the order guarantee.
+	-- keeps off the device) and .DS_Store would survive a plain "$TGT"/* —
+	-- and leftover entries fragment the FAT directory, so first-fit
+	-- allocation into the gaps can reorder the new entries. Emptying the
+	-- root as completely as possible is part of the order guarantee.
 	-- (.[!.]* and ..?* cover dot-names while never matching "." or "..";
 	-- rm -f exits 0 when a glob matches nothing and is passed literally.)
+	--
+	-- rm errors are tolerated (2>/dev/null): SIP protects Spotlight's
+	-- .Spotlight-V100 index on external volumes — it cannot be deleted even
+	-- with sudo — and macOS may recreate .fseventsd/.DS_Store between the
+	-- rm and the check. Those system entries are invisible to players and
+	-- harmless. But anything ELSE surviving means the volume is only
+	-- half-erased, so the script stops rather than copy onto it.
 	if buttonChoice = "NUKE + Copy" then
 		display dialog "NUKING TARGET in 3 seconds..." giving up after 1
 		display dialog "2..." giving up after 1
 		display dialog "1..." giving up after 1
-		do shell script "rm -rf " & quoted form of tgtPath & "/* " & quoted form of tgtPath & "/.[!.]* " & quoted form of tgtPath & "/..?*"
+		set leftover to do shell script ("rm -rf " & quoted form of tgtPath & "/* " & quoted form of tgtPath & "/.[!.]* " & quoted form of tgtPath & "/..?* 2>/dev/null
+ls -A " & quoted form of tgtPath & " | grep -vxE '[.](Spotlight-V100|fseventsd|Trashes|TemporaryItems|DS_Store)' || true")
+		if leftover is not "" then
+			display dialog "NUKE could not remove:
+
+" & leftover & "
+
+Stopping — play order cannot be guaranteed on a half-erased volume. Eject and re-plug the drive and try again, or reformat it (Disk Utility, MS-DOS/FAT32), then run this tool again." buttons {"OK"} default button "OK" with icon stop
+			return
+		end if
 	end if
 
 	-- Private work directory for the script + file list (fixed names in

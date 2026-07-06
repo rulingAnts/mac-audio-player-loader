@@ -167,15 +167,23 @@
       print the tree directly in the Terminal instead of opening a browser. In the erase dialog, Cancel
       folds into Back (3-button limit): Esc = Back, the re-shown disk list keeps the operator's previous
       selection, and the list's own Cancel aborts the run.</li>
-    <li><strong>Enumerate targets.</strong> Lists external <em>physical</em> disks, skipping the source disk(s)
-      and any write-protected (read-only) media. Captures each disk's exact byte size for later re-checks.</li>
+    <li><strong>Enumerate targets.</strong> Lists external <em>physical</em> disks, plus cards in a
+      built-in SD slot: that reader enumerates as <em>internal</em> on many Macs, so internal physical disks
+      are admitted <em>only</em> when diskutil reports them as removable media on a card-reader protocol
+      (<code>Secure Digital</code>, or <code>USB</code> for USB-wired internal readers) — an internal
+      SSD/HDD can never qualify (Apple Fabric / PCI-Express / SATA, not removable), and APFS synthesized
+      containers are virtual, outside the physical listing. Skips the source disk(s) and any
+      write-protected (read-only) media, e.g. an SD card with its lock slider set. Captures each disk's
+      exact byte size for later re-checks.</li>
     <li><strong>Pick &amp; confirm (two dialogs).</strong> A native list of whole disks (all preselected;
       Cmd-click to deselect ones to keep), then an explicit “ERASE these / KEEP these” summary whose
       default button is <em>Back</em>.</li>
     <li><strong>Consent-gated side effects.</strong> Only after confirmation: disable Finder <code>.DS_Store</code>
       writes to USB volumes (the pre-run value is captured first and restored on exit — §9). The
       source folder itself is never modified.</li>
-    <li><strong>Erase (parallel).</strong> Each disk is re-verified (§5) then <code>eraseDisk</code>'d, with one retry.</li>
+    <li><strong>Erase (parallel).</strong> Each disk is re-verified (§5), cleanly unmounted (so the
+      partition rewrite cannot fire a spurious “Disk Not Ejected Properly” notification), then
+      <code>eraseDisk</code>'d, with one retry.</li>
     <li><strong>Prepare &amp; verify.</strong> Mount each freshly erased volume; proceed only if its name is the
       chosen label and it resolves to the expected device node.</li>
     <li><strong>Copy (parallel).</strong> Write the content to each verified volume with the tool's own
@@ -225,7 +233,9 @@
       <td>Skip any disk whose <code>diskutil info</code> reports <code>Media Read-Only: Yes</code>.</td>
       <td>Hardware-locked cards (e.g. MegaVoice CSD lock) can't be written; skipping avoids confusing mid-run failures.</td></tr>
     <tr><td>External physical only</td>
-      <td>Targets come solely from <code>diskutil list external physical</code>.</td>
+      <td>Targets come solely from <code>diskutil list external physical</code>, plus internal
+      <em>removable</em> media on a card-reader protocol (the built-in SD slot) — never an internal
+      SSD/HDD or an APFS synthesized container.</td>
       <td>Internal disks are never enumerated as candidates.</td></tr>
     <tr><td>Two-step human confirmation</td>
       <td>A disk picker (deselect to keep) plus a distinct “ERASE / KEEP” summary dialog defaulting to <em>Back</em>.</td>

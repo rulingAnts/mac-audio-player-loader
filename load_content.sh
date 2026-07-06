@@ -225,7 +225,7 @@ run_again_prompt() {
       # erase failure. (Same ownership guard as the rename step.)
       vn=$(diskutil info "${d}s1" 2>/dev/null | sed -n 's/.*Volume Name: *//p')
       case "$vn" in "$LABEL" | "$REDO_LABEL") ;; *) continue ;; esac
-      external_physical | grep -qx "$d" || continue
+      target_disks | grep -qx "$d" || continue
       mp=$(diskutil info "${d}s1" 2>/dev/null | sed -n 's/.*Mount Point: *//p')
       [ -n "$mp" ] && [ -d "$mp" ] || continue
       blink_one "$d" "$mp" "$BLINK_FLAG" &
@@ -423,8 +423,26 @@ for store in $(diskutil info "$src_whole" 2>/dev/null | sed -n 's/.*APFS Physica
 done
 is_src_disk() { case " $src_disks " in *" $1 "*) return 0 ;; esac; return 1; }
 
-external_physical() {
+# Candidate TARGET disks: external physical devices (USB sticks, players,
+# USB card readers), PLUS cards sitting in a built-in SD slot. The built-in
+# reader enumerates as INTERNAL on many Macs, so "external physical" alone
+# misses it. An internal disk qualifies ONLY if diskutil reports it as
+# REMOVABLE media on a card-reader protocol (Secure Digital, or USB for the
+# USB-wired internal readers in some models) — an internal SSD/HDD can never
+# match (Apple Fabric / PCI-Express / SATA, and not removable), and APFS
+# synthesized containers are virtual, outside `list … physical`. Every
+# downstream safeguard (source-disk exclusion, write-protect skip, the
+# pre-erase identity re-check) runs on this same list.
+target_disks() {
   diskutil list external physical | sed -n 's|^/dev/\([a-z0-9]*\).*|\1|p'
+  local d info
+  while IFS= read -r d; do
+    info=$(diskutil info "$d" 2>/dev/null)
+    printf '%s\n' "$info" | grep -qE '^ *Protocol: *(Secure Digital|USB) *$' || continue
+    # field wording varies across macOS versions: "Removable" vs "Yes"
+    printf '%s\n' "$info" | grep -qE '^ *Removable Media: *(Removable|Yes) *$' || continue
+    printf '%s\n' "$d"
+  done < <(diskutil list internal physical 2>/dev/null | sed -n 's|^/dev/\([a-z0-9]*\).*|\1|p')
 }
 disk_bytes() {
   diskutil info "$1" 2>/dev/null | sed -n 's/.*Disk Size:.*(\([0-9]*\) Bytes.*/\1/p'
@@ -434,7 +452,7 @@ disk_bytes() {
 devices=()   # diskN identifiers
 dev_bytes=() # exact size in bytes, to detect device renumbering later
 labels=()    # human lines for the picker
-# Fed by  < <(external_physical)  at the matching `done` below — a PROCESS
+# Fed by  < <(target_disks)  at the matching `done` below — a PROCESS
 # SUBSTITUTION, not a pipe, so this loop runs in the CURRENT shell and the three
 # arrays it fills survive. (A pipe would run the loop body in a subshell and the
 # arrays would come back empty — a classic bash gotcha.)
@@ -449,7 +467,7 @@ while IFS= read -r dev; do
   # earlier releases printed "Read-Only Media" — match both or the guard is
   # silently inert on the older systems we claim to support.
   if diskutil info "$dev" | grep -qE '(Media Read-Only|Read-Only Media): *Yes'; then
-    echo "Skipping $dev — WRITE-PROTECTED (unlock it first, e.g. green button on the card locker)"
+    echo "Skipping $dev — WRITE-PROTECTED (unlock it first: SD cards have a lock slider on the side; card lockers use the green button)"
     continue
   fi
   bytes=$(disk_bytes "$dev")
@@ -476,11 +494,11 @@ while IFS= read -r dev; do
   devices+=("$dev")
   dev_bytes+=("${bytes:-0}")
   labels+=("$dev — ${size_h:-?} — $voltxt — ${media:-unknown device}")
-done < <(external_physical)
+done < <(target_disks)
 
 [ ${#devices[@]} -gt 0 ] || {
-  echo "No usable external disks found."
-  gui_alert "$APP_TITLE" "No external USB devices were found. Check that the hub is connected and powered and the devices are inserted, then run again."
+  echo "No usable target disks found (USB or SD card)."
+  gui_alert "$APP_TITLE" "No target devices were found. Check that the hub is connected and powered and the devices are inserted — for an SD card, that it is fully seated in the card slot — then run again."
   exit 1
 }
 
@@ -501,7 +519,7 @@ on run argv
 	try
 		set n to (count of devs) as text
 		repeat
-			set btn to button returned of (display dialog n & " external disks detected." & linefeed & linefeed & "Selected disks will be COMPLETELY ERASED — every partition and volume on each selected disk is wiped — and then loaded with your audio content." buttons {"Cancel", "Show in Finder", "Choose disks…"} default button "Choose disks…" with icon caution with title appTitle)
+			set btn to button returned of (display dialog n & " target disks detected (USB devices / SD cards)." & linefeed & linefeed & "Selected disks will be COMPLETELY ERASED — every partition and volume on each selected disk is wiped — and then loaded with your audio content." buttons {"Cancel", "Show in Finder", "Choose disks…"} default button "Choose disks…" with icon caution with title appTitle)
 			if btn is "Choose disks…" then exit repeat
 			if btn is "Show in Finder" then do shell script "open /Volumes"
 		end repeat
@@ -999,13 +1017,20 @@ for idx in "${!devices[@]}"; do
     # Re-verify identity RIGHT BEFORE erasing: same size, still listed as
     # external+physical. Disk numbers get reused when devices are
     # unplugged/replugged, and the picker may have been open a while.
-    if [ "$(disk_bytes "$dev")" != "$want" ] || ! external_physical | grep -qx "$dev"; then
+    if [ "$(disk_bytes "$dev")" != "$want" ] || ! target_disks | grep -qx "$dev"; then
       echo "device changed since the list was shown — skipped for safety" > "$STATUS_DIR/$dev.notloaded"
       echo "  SKIPPED $dev — device changed since the list was shown" >&2
       exit 0
     fi
+    # Unmount cleanly BEFORE erasing. eraseDisk unmounts on its own, but on
+    # modern macOS the partition rewrite can still fire a spurious
+    # "Disk Not Ejected Properly" notification when the old volumes were
+    # mounted going in; a clean unmount first keeps the run quiet. A failed
+    # unmount is fine — eraseDisk performs its own as before.
+    diskutil unmountDisk "/dev/$dev" >/dev/null 2>&1
     if diskutil eraseDisk FAT32 "$LABEL" MBRFormat "/dev/$dev" >/dev/null 2>&1 ||
-       { sleep 2; diskutil eraseDisk FAT32 "$LABEL" MBRFormat "/dev/$dev" >/dev/null 2>&1; }; then
+       { sleep 2; diskutil unmountDisk "/dev/$dev" >/dev/null 2>&1
+         diskutil eraseDisk FAT32 "$LABEL" MBRFormat "/dev/$dev" >/dev/null 2>&1; }; then
       : > "$STATUS_DIR/$dev.erased"
       echo "  erased  $dev"
     else
@@ -1296,7 +1321,7 @@ done
 # $LABEL) — never a disk whose number was reused by an unrelated drive.
 for d in $redo_devs; do
   vn=$(diskutil info "${d}s1" 2>/dev/null | sed -n 's/.*Volume Name: *//p')
-  if [ "$vn" = "$LABEL" ] && external_physical | grep -qx "$d"; then
+  if [ "$vn" = "$LABEL" ] && target_disks | grep -qx "$d"; then
     diskutil rename "/dev/${d}s1" "$REDO_LABEL" >/dev/null 2>&1
   fi
 done

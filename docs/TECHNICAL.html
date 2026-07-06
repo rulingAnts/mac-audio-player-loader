@@ -138,11 +138,11 @@
       files <code>001.mp3</code>… with extension preserved; one counter per directory covers folders and
       files together, restarting in each directory; the source is untouched). Children of a renamed folder
       are written under its renamed path.</li>
-    <li><strong>Resolve source disk(s).</strong> Determines which physical disk(s) hold the content folder
-      (walking APFS synthesized→physical) so they can never be erased.</li>
     <li><strong>Target-player selection.</strong> The operator picks the player model (from the documented
       families in the operator guide) or “Other / not sure”. Encrypted-only players (MegaVoice Envision,
       Davar/Kivah Audibible) are refused with an explanation, before anything is touched.</li>
+    <li><strong>Resolve source disk(s).</strong> Determines which physical disk(s) hold the content folder
+      (walking APFS synthesized→physical) so they can never be erased.</li>
     <li><strong>Write manifest.</strong> Builds one ordered map (source&nbsp;&rarr;&nbsp;device
       path) of every folder and file in exact write order, with any simple-numbers renaming applied; both the
       copy and the preview read this same manifest, so what the operator previews is exactly what is

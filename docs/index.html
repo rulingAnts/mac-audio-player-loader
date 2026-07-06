@@ -229,24 +229,43 @@
       (letters and numbers, up to 11).</p>
       <p style="color:#66707a"><small>💡 Tip: use a <strong>new, unused name each batch</strong> —
       it makes the after-the-run device check (see <em>Verify every device</em>, below) reliable.</small></p>
-      <p>A few more quick questions follow:</p>
+      <figure>
+        <img class="shot" src="images/04-label.png" alt="Screenshot: the volume-label dialog">
+        <figcaption>The volume-label dialog</figcaption>
+      </figure>
+<p>A few more quick questions follow:</p>
       <ul>
-        <li><strong>Which player?</strong> — pick your player model from a list. The loader then checks
-        your content against <em>that player's</em> documented rules (folder depth, file types, naming)
-        before anything is erased. Pick <strong>Other / not sure</strong> for generic checks only.
-        Choosing a player this tool cannot load (encrypted-only models like the MegaVoice Envision or
-        Davar/Kivah Audibible) explains why and stops safely.</li>
         <li><strong>Names on the devices</strong> — keep your original folder and file names, or have every
         folder <em>and</em> audio file renamed to <strong>simple numbers</strong> (folders become
         <code>001</code>, <code>002</code>, …; files become <code>001.mp3</code>, <code>002.mp3</code>, …)
         in play order, restarting inside each folder. Files keep their extension, and your source folder is
-        never touched. Choose <strong>Simple numbers</strong> if your player is picky about long names.</li>
+        never touched. Choose <strong>Simple numbers</strong> if your player is picky about long names.
+      <figure>
+        <img class="shot"  src="images/11-names.png" alt="Screenshot: the names-on-the-devices dialog with Simple numbers and Keep names buttons">
+        <figcaption>Keep your names, or write everything as simple numbers</figcaption>
+      </figure>
+        </li>
+        <li><strong>Which player?</strong> — pick your player model from a list. The loader then checks
+        your content against <em>that player's</em> documented rules (folder depth, file types, naming)
+        before anything is erased. Pick <strong>Other / not sure</strong> for generic checks only.
+        Choosing a player this tool cannot load (encrypted-only models like the MegaVoice Envision or
+        Davar/Kivah Audibible) explains why and stops safely.
+      <figure>
+        <img class="shot"  src="images/12-player.png" alt="Screenshot: the player picker list with the documented player families">
+        <figcaption>Pick the player these devices are for</figcaption>
+      </figure>
+        </li>
         <li><strong>Write-order preview</strong> — files are written <strong>in filename order</strong>
         (add <code>001</code>, <code>002</code>… prefixes to set the order). The final erase confirmation
         restates this rule, and its <strong>Preview order…</strong> button opens a collapsible folder tree
         in your browser showing exactly what will be written, in play order — original names alongside the
         renamed device names when simple numbers is on. Expand/collapse any folder, or use the
-        <em>Expand all / Collapse all</em> buttons.</li>
+        <em>Expand all / Collapse all</em> buttons.
+      <figure>
+        <img class="shot"  src="images/15-preview-renamed.png" alt="Screenshot: the write-order preview page with simple numbers on, green renamed names beside the originals">
+        <figcaption>The preview with <strong>Simple numbers</strong> on: device names in green, your original names beside them</figcaption>
+      </figure>
+        </li>
         <li><strong>Content check</strong> — if the loader spots things that often will not play
         (audio sitting directly inside a top-level folder when a player expects an album sub-folder,
         file types like <code>.m4a</code> that many players cannot decode, empty folders, folders mixing
@@ -254,12 +273,18 @@
         write-order preview opens automatically with each flagged item marked <strong>right where it
         sits</strong> in the tree, the specific reason written on the item, and every parent folder down
         to it flagged and pre-expanded. Read it — then <strong>Load anyway</strong>, or
-        <strong>Cancel</strong> and fix the folder first.</li>
-      </ul>
+        <strong>Cancel</strong> and fix the folder first.
       <figure>
-        <img class="shot" src="images/04-label.png" alt="Screenshot: the volume-label dialog">
-        <figcaption>The volume-label dialog</figcaption>
+        <img class="shot"  src="images/13-content-check.png" alt="Screenshot: the content-check caution dialog listing flagged files with Cancel and Load anyway buttons">
+        <figcaption>The content check names each problem file</figcaption>
       </figure>
+      <figure>
+        <img class="shot"  src="images/14-preview-flagged.png" alt="Screenshot: the flagged write-order preview with problem items marked in red and parent folders marked with warning icons">
+        <figcaption>…and the preview opens automatically with every flagged item marked where it sits</figcaption>
+      </figure>
+        </li>
+      </ul>
+      
     </li>
 
     <li>
@@ -296,8 +321,8 @@
       <strong>Back</strong> to change the selection (your choices are kept; pressing
       <kbd>Esc</kbd> also goes back, and the disk list's Cancel button aborts the run).</p>
       <figure>
-        <img class="shot" src="images/07-confirm.png" alt="Screenshot: the final erase/keep confirmation dialog">
-        <figcaption>Final confirmation before erasing</figcaption>
+        <img class="shot"  src="images/07-confirm.png" alt="Screenshot: the final erase/keep confirmation dialog"
+        <figcaption>Final confirmation — <strong>Preview order…</strong> opens the write-order tree</figcaption>
       </figure>
     </li>
 

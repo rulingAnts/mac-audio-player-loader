@@ -235,18 +235,24 @@
         before anything is erased. Pick <strong>Other / not sure</strong> for generic checks only.
         Choosing a player this tool cannot load (encrypted-only models like the MegaVoice Envision or
         Davar/Kivah Audibible) explains why and stops safely.</li>
-        <li><strong>File names on the devices</strong> — keep your original file names, or have every
-        audio file renamed to <strong>simple numbers</strong> (<code>001.mp3</code>, <code>002.mp3</code>, …)
-        in play order, restarting in each folder. Folder names stay, and your source files are never
-        touched. Choose <strong>Simple numbers</strong> if your player is picky about long names.</li>
-        <li><strong>Write-order preview</strong> — the loader shows how it will lay the files down:
-        <strong>in filename order</strong> (add <code>001</code>, <code>002</code>… prefixes to set the order).
-        You can open a full, scrollable preview of the exact write order in your browser before choosing any
-        disk, and the order is restated in the final erase confirmation.</li>
+        <li><strong>Names on the devices</strong> — keep your original folder and file names, or have every
+        folder <em>and</em> audio file renamed to <strong>simple numbers</strong> (folders become
+        <code>001</code>, <code>002</code>, …; files become <code>001.mp3</code>, <code>002.mp3</code>, …)
+        in play order, restarting inside each folder. Files keep their extension, and your source folder is
+        never touched. Choose <strong>Simple numbers</strong> if your player is picky about long names.</li>
+        <li><strong>Write-order preview</strong> — files are written <strong>in filename order</strong>
+        (add <code>001</code>, <code>002</code>… prefixes to set the order). The final erase confirmation
+        restates this rule, and its <strong>Preview order…</strong> button opens a collapsible folder tree
+        in your browser showing exactly what will be written, in play order — original names alongside the
+        renamed device names when simple numbers is on. Expand/collapse any folder, or use the
+        <em>Expand all / Collapse all</em> buttons.</li>
         <li><strong>Content check</strong> — if the loader spots things that often will not play
         (audio sitting directly inside a top-level folder when a player expects an album sub-folder,
-        file types like <code>.m4a</code> that many players cannot decode, folders mixing numbered and
-        un-numbered names), a caution box lists them. Read it — then <strong>Load anyway</strong>, or
+        file types like <code>.m4a</code> that many players cannot decode, empty folders, folders mixing
+        numbered and un-numbered names), a caution box lists every offending file by name — and the
+        write-order preview opens automatically with each flagged item marked <strong>right where it
+        sits</strong> in the tree, the specific reason written on the item, and every parent folder down
+        to it flagged and pre-expanded. Read it — then <strong>Load anyway</strong>, or
         <strong>Cancel</strong> and fix the folder first.</li>
       </ul>
       <figure>
@@ -283,8 +289,11 @@
     <li>
       <h3>Read and confirm</h3>
       <p>A final message shows exactly which disks will be <strong>ERASED</strong> and
-      which will be <strong>KEPT</strong>. Read it! Then click <strong>Erase &amp; Load</strong>
-      (or <strong>Back</strong> to change the selection).</p>
+      which will be <strong>KEPT</strong>, and reminds you that files are written in
+      <strong>filename order</strong>. Read it! Then click <strong>Erase &amp; Load</strong> —
+      or <strong>Preview order…</strong> to open the write-order tree in your browser first, or
+      <strong>Back</strong> to change the selection (your choices are kept; pressing
+      <kbd>Esc</kbd> also goes back, and the disk list's Cancel button aborts the run).</p>
       <figure>
         <img class="shot" src="images/07-confirm.png" alt="Screenshot: the final erase/keep confirmation dialog">
         <figcaption>Final confirmation before erasing</figcaption>

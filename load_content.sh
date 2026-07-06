@@ -289,24 +289,25 @@ if [ "$LABEL" = "$REDO_LABEL" ]; then
   exit 1
 fi
 
-# --- Optional: simple numeric file names on the devices -----------------
-# Some picky player firmware mishandles long or unusual file names. This
-# option renames every FILE on the TARGET devices to 3-digit numbers in play
-# order — 001.mp3, 002.mp3, … restarting in each folder, extension kept,
-# folder names kept, and the SOURCE folder never touched. Play order is
-# unchanged: numbering follows the same name-sort the copy already uses.
+# --- Optional: simple numeric names on the devices ----------------------
+# Some picky player firmware mishandles long or unusual names. This option
+# renames every FOLDER and FILE on the TARGET devices to 3-digit numbers in
+# play order — folders become 001, 002, …; files become 001.mp3, 002.mp3, …
+# (extension kept); numbering restarts inside each folder; the SOURCE folder
+# is never touched. Play order is unchanged: numbering follows the same
+# name-sort the copy already uses.
 SIMPLE_NAMES=0
 if [ "$use_gui" -eq 1 ]; then
   btn=$(osascript -e 'on run {t}' \
-    -e 'button returned of (display dialog "File names on the devices:" & return & return & "KEEP NAMES — copy your file names as they are." & return & return & "SIMPLE NUMBERS — rename every audio file to 001.mp3, 002.mp3, … in play order (numbering restarts in each folder; folder names are kept). Safest for picky players. Your source files are never renamed." buttons {"Simple numbers", "Keep names"} default button "Keep names" with title t)' \
+    -e 'button returned of (display dialog "Names on the devices:" & return & return & "KEEP NAMES — copy your folder and file names as they are." & return & return & "SIMPLE NUMBERS — rename every folder and audio file to 001, 002, … in play order (files keep their extension; numbering restarts inside each folder). Safest for picky players. Your source folder is never renamed." buttons {"Simple numbers", "Keep names"} default button "Keep names" with title t)' \
     -e 'end run' "$APP_TITLE" 2>/dev/null) || { echo "Cancelled."; exit 0; }
   [ "$btn" = "Simple numbers" ] && SIMPLE_NAMES=1
 elif [ -t 0 ]; then
-  printf 'Rename files on the devices to simple numbers (001.mp3, ...)? (y/N): '
+  printf 'Rename folders and files on the devices to simple numbers (001, 002.mp3, ...)? (y/N): '
   read -r ans
   case "$ans" in [Yy]*) SIMPLE_NAMES=1 ;; esac
 fi
-[ "$SIMPLE_NAMES" -eq 1 ] && echo "File names on devices: SIMPLE NUMBERS (001.mp3, 002.mp3, ...)" || echo "File names on devices: kept as-is"
+[ "$SIMPLE_NAMES" -eq 1 ] && echo "Names on devices: SIMPLE NUMBERS (folders and files -> 001, 002, ...)" || echo "Names on devices: kept as-is"
 
 # --- Which player is this content for? ----------------------------------
 # The loader is player-agnostic, but the CONTENT CHECK below is far more
@@ -494,7 +495,9 @@ gui_pick() {
   osascript - "$APP_TITLE" "$@" <<'APPLESCRIPT'
 on run argv
 	set appTitle to item 1 of argv
-	set devs to rest of argv
+	set previewPath to item 2 of argv
+	set orderNote to item 3 of argv
+	set devs to items 4 thru -1 of argv
 	try
 		set n to (count of devs) as text
 		repeat
@@ -503,9 +506,11 @@ on run argv
 			if btn is "Show in Finder" then do shell script "open /Volumes"
 		end repeat
 		set text item delimiters to linefeed
+		set defaultSel to devs
 		repeat
-			set sel to choose from list devs with title appTitle with prompt "Each row is ONE PHYSICAL DISK (a disk may hold several volumes — they are erased together). All disks are selected. Cmd-click any disk you want to KEEP, to deselect it." default items devs OK button name "Continue…" with multiple selections allowed
+			set sel to choose from list devs with title appTitle with prompt "Each row is ONE PHYSICAL DISK (a disk may hold several volumes — they are erased together). All disks are selected. Cmd-click any disk you want to KEEP, to deselect it." default items defaultSel OK button name "Continue…" with multiple selections allowed
 			if sel is false then return "CANCELLED"
+			set defaultSel to sel -- Back/Esc re-shows the list with THIS selection kept
 			set keepList to {}
 			repeat with d in devs
 				set dt to d as text
@@ -513,8 +518,20 @@ on run argv
 			end repeat
 			set msg to "ERASE these " & ((count of sel) as text) & " disk(s) — ALL volumes on them will be wiped:" & linefeed & (sel as text)
 			if (count of keepList) > 0 then set msg to msg & linefeed & linefeed & "KEEP these (not touched):" & linefeed & (keepList as text)
-			set msg to msg & linefeed & linefeed & "Files are written in FILENAME ORDER — add number prefixes (001, 002, 003) to set the play order."
-			set btn2 to button returned of (display dialog msg buttons {"Back", "Cancel", "Erase & Load"} default button "Back" with icon caution with title appTitle)
+			set msg to msg & linefeed & linefeed & orderNote
+			-- 3-button cap: Cancel folds into Back (Esc = Back; the list it
+			-- returns to has its own Cancel), freeing a slot for the preview.
+			repeat
+				try
+					set btn2 to button returned of (display dialog msg buttons {"Back", "Preview order…", "Erase & Load"} default button "Back" cancel button "Back" with icon caution with title appTitle)
+				on error number -128
+					set btn2 to "Back"
+				end try
+				if btn2 is not "Preview order…" then exit repeat
+				try -- a failed open must never tear down the confirmation flow
+					do shell script "open " & quoted form of previewPath
+				end try
+			end repeat
 			if btn2 is "Erase & Load" then return sel as text
 			-- "Back" -> show the list again
 		end repeat
@@ -525,102 +542,352 @@ end run
 APPLESCRIPT
 }
 
-# ===== WRITE MANIFEST + ORDER PREVIEW ==================================
+# ===== WRITE MANIFEST + CONTENT CHECK + ORDER PREVIEW ==================
 # Build ONE ordered map of what will be written (src -> dest for every folder
-# and file, in exact write order, with the simple-names renaming already
-# applied), then let the operator PREVIEW it before choosing disks. Both the
-# preview and every device's copy read this same manifest, so the preview is
-# exactly what gets written, and the per-directory simple-names numbering is
-# computed once. Created here (before the picker) so nothing is erased until
-# the operator has reviewed the order.
+# and file, in exact write order, with any simple-numbers renaming already
+# applied). Both the preview and every device's copy read this same manifest,
+# so the preview is exactly what gets written and the numbering is computed
+# once. The content check itemizes problems PER PATH; the preview marks every
+# flagged item in place (parent folders get a warning marker too) and opens
+# automatically when anything is flagged. It is also available on demand from
+# the erase confirmation ("Preview order…") — no extra dialog on every run.
 STATUS_DIR=$(mktemp -d)
 MANIFEST="$STATUS_DIR/manifest"
 build_manifest() {
   cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \
        \( -type f -o -type d \) "${PAYLOAD_SKIP[@]}" -print0 |
      LC_ALL=C sort -z |
-     { sn_dirs=(); sn_counts=()
+     { sn_dirs=(); sn_counts=()   # per-SOURCE-folder counter over ALL children
+       map_src=(); map_dest=()    # source folder -> its RENAMED folder path
+       last_pd=""; last_destdir=""; last_hit=-1
        while IFS= read -r -d '' p; do
          rel=${p#./}
-         if [ -d "$p" ]; then
-           printf 'D\0%s\0%s\0' "$rel" "$rel"
+         if [ "${SIMPLE_NAMES:-0}" -ne 1 ]; then
+           if [ -d "$p" ]; then printf 'D\0%s\0%s\0' "$rel" "$rel"
+           else printf 'F\0%s\0%s\0' "$rel" "$rel"; fi
+           continue
+         fi
+         # Simple numbers: folders AND files become 001, 002, … per folder, in
+         # write order; files keep their extension. Children of a renamed
+         # folder land under its renamed path (map_src/map_dest). The parent
+         # of the previous entry is cached — children are contiguous in sort
+         # order except for rare prefix-named siblings, which the map covers.
+         case "$rel" in */*) pd=${rel%/*} ;; *) pd="." ;; esac
+         pb=${rel##*/}
+         if [ "$pd" = "$last_pd" ]; then
+           destdir=$last_destdir; hit=$last_hit
          else
-           dest=$rel
-           if [ "${SIMPLE_NAMES:-0}" -eq 1 ]; then
-             case "$rel" in */*) pd=${rel%/*} ;; *) pd="." ;; esac
-             pb=${rel##*/}
-             hit=-1
-             for i in ${sn_dirs[@]+"${!sn_dirs[@]}"}; do
-               if [ "${sn_dirs[i]}" = "$pd" ]; then hit=$i; break; fi
+           destdir=$pd
+           if [ "$pd" != "." ]; then
+             for i in ${map_src[@]+"${!map_src[@]}"}; do
+               if [ "${map_src[i]}" = "$pd" ]; then destdir=${map_dest[i]}; break; fi
              done
-             if [ "$hit" -ge 0 ]; then n=$(( ${sn_counts[hit]} + 1 )); sn_counts[hit]=$n
-             else n=1; sn_dirs+=("$pd"); sn_counts+=(1); fi
-             case "$pb" in *.*) ext=".${pb##*.}" ;; *) ext="" ;; esac
-             if [ "$pd" = "." ]; then dest="$(printf '%03d' "$n")$ext"
-             else dest="$pd/$(printf '%03d' "$n")$ext"; fi
            fi
+           hit=-1
+           for i in ${sn_dirs[@]+"${!sn_dirs[@]}"}; do
+             if [ "${sn_dirs[i]}" = "$pd" ]; then hit=$i; break; fi
+           done
+           if [ "$hit" -lt 0 ]; then
+             sn_dirs+=("$pd"); sn_counts+=(0); hit=$((${#sn_dirs[@]} - 1))
+           fi
+           last_pd=$pd; last_destdir=$destdir; last_hit=$hit
+         fi
+         n=$(( ${sn_counts[hit]} + 1 )); sn_counts[hit]=$n
+         num=$(printf '%03d' "$n")
+         if [ -d "$p" ]; then
+           if [ "$pd" = "." ]; then dest=$num; else dest="$destdir/$num"; fi
+           map_src+=("$rel"); map_dest+=("$dest")
+           printf 'D\0%s\0%s\0' "$rel" "$dest"
+         else
+           case "$pb" in *.*) ext=".${pb##*.}" ;; *) ext="" ;; esac
+           if [ "$pd" = "." ]; then dest="$num$ext"; else dest="$destdir/$num$ext"; fi
            printf 'F\0%s\0%s\0' "$rel" "$dest"
          fi
        done; }
 }
 build_manifest > "$MANIFEST"
 
-# Scrollable HTML preview of the manifest (opened in the default browser).
-PREVIEW_HTML="$STATUS_DIR/write-order-preview.html"
-write_preview() {
-  local kind src dest rel depth i indent name en dn edn sl
-  printf '%s\n' \
-    '<!doctype html><meta charset="utf-8"><title>Write-order preview</title>' \
-    '<style>body{font:15px/1.55 -apple-system,Helvetica,Arial,sans-serif;margin:22px;color:#1f2933;max-width:920px}' \
-    'h1{font-size:1.35rem;margin:0 0 .1em}.lead{color:#5c6773;margin:.1em 0 1em}' \
-    '.tip{background:#eef4fb;border-left:4px solid #4a82c4;padding:9px 13px;border-radius:0 8px 8px 0;margin:12px 0}' \
-    '.f{font-weight:700;margin:.55em 0 .1em}.file{font-family:ui-monospace,Menlo,monospace;font-size:.9em;white-space:pre}' \
-    '.ren{color:#0b6b5a;font-weight:600}.old{color:#8a8a8f}</style>' \
-    '<h1>Preview &#8212; what will be written, in play order</h1>'
-  en=$PLAYER_PROFILE; en=${en//&/&amp;}; en=${en//</&lt;}; en=${en//>/&gt;}
-  printf '<p class="lead">Target player: <strong>%s</strong></p>\n' "$en"
-  printf '%s\n' '<div class="tip"><strong>Files play in filename order</strong> (A&#8594;Z) within each folder. To change the order, add leading-zero number prefixes &#8212; <code>001</code>, <code>002</code>, <code>003</code>&#8230; &#8212; to the file names.</div>'
-  [ "$SIMPLE_NAMES" -eq 1 ] && printf '%s\n' '<div class="tip"><strong>Simple numbers is ON:</strong> each file is written as <code>001.ext</code>, <code>002.ext</code>&#8230; (green), with the original name after it.</div>'
+# ===== CONTENT CHECK (profile-aware, warnings only) =====================
+# Validates the payload against the SELECTED PLAYER's documented rules before
+# any disk is chosen, and names EVERY offending file/folder by its path
+# relative to the content root, with the reason. The dialog shows the first
+# few per problem; the Terminal always gets the complete list, and the
+# write-order preview marks each flagged item exactly where it sits. Warnings
+# never block (specs vary, firmware revisions differ) — the operator reads
+# them and picks Load anyway / Cancel.
+PROBLEMS="$STATUS_DIR/problems"   # itemized:  src-rel-path NUL short-reason NUL …
+: > "$PROBLEMS"
+warn=""       # capped version for the dialog
+warnfull=""   # complete version for the terminal
+add_warn() {  # $1 header for the dialog; $2 path list (annotations allowed);
+              # $3 short per-item reason for the preview; $4 bare path list
+              # when $2 carries annotations (defaults to $2)
+  local hdr=$1 list=$2 short=${3:-$1} bare=${4:-$2} n shown rest p
+  [ -n "$list" ] || return 0
+  n=$(printf '%s\n' "$list" | grep -c .)
+  warnfull="$warnfull• $hdr"$'\n'"$(printf '%s\n' "$list" | sed 's/^/    /')"$'\n'
+  shown=$(printf '%s\n' "$list" | head -8 | sed 's/^/    /')
+  warn="$warn• $hdr"$'\n'"$shown"$'\n'
+  rest=$((n - 8))
+  [ "$rest" -gt 0 ] && warn="$warn    … and $rest more — the complete list is in the Terminal window."$'\n'
+  while IFS= read -r p; do
+    [ -n "$p" ] && printf '%s\0%s\0' "$p" "$short" >> "$PROBLEMS"
+  done <<< "$bare"
+}
+plabel="many players"
+case "$PLAYER_PROFILE" in "Other / not sure") ;; *) plabel="the $PLAYER_PROFILE" ;; esac
+# 1. audio types the selected player is not documented to play
+fmt_re=$(printf '%s' "$P_FORMATS" | tr ' ' '|')
+bad_ext=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
+  awk -v re="\\.(${fmt_re})$" 'tolower($0) !~ re' | sed 's|^\./||' | LC_ALL=C sort)
+add_warn "These files are types $plabel cannot play — they will be silent or skipped (playable: $P_FORMATS):" "$bad_ext" \
+  "file type $plabel cannot play (plays: $P_FORMATS) — will be silent or skipped"
+# 2. loose audio at the volume's top level
+loose=$(cd "$SRC" && find . -mindepth 1 -maxdepth 1 -type f "${PAYLOAD_SKIP[@]}" -print | sed 's|^\./||' | LC_ALL=C sort)
+add_warn "These files sit at the very top level, outside any folder — most players ignore them:" "$loose" \
+  "sits outside any folder — most players ignore it; move it into a folder"
+# 3. folder depth vs the player's documented structure
+if [ -n "$P_DEPTHS" ]; then
+  bad_depth=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
+    awk -F/ -v ok=" $P_DEPTHS " '{d = NF - 1; if (index(ok, " " d " ") == 0) print}' | sed 's|^\./||' | LC_ALL=C sort)
+  add_warn "These files sit at a folder depth $plabel does not read audio from ($plabel plays files $P_DEPTHS folder level(s) below the content root) — they will be SKIPPED; move each into the expected level (e.g. a numbered sub-folder):" "$bad_depth" \
+    "wrong folder depth — $plabel plays audio only $P_DEPTHS level(s) below the root; this will be SKIPPED"
+else
+  # no documented depth for this profile — generic signal: audio directly in a
+  # top-level folder while sibling folders use sub-folders (classic silent-folder cause)
+  nested=""
+  while IFS= read -r dtop; do
+    [ -n "$(cd "$SRC" && find "$dtop" -mindepth 2 -type f "${PAYLOAD_SKIP[@]}" -print 2>/dev/null | head -1)" ] && nested="yes"
+  done < <(cd "$SRC" && find . -mindepth 1 -maxdepth 1 "${PAYLOAD_PRUNE[@]}" -o -type d -print)
+  if [ -n "$nested" ]; then
+    flat_files=$(cd "$SRC" && find . -mindepth 2 -maxdepth 2 -type f "${PAYLOAD_SKIP[@]}" -print | sed 's|^\./||' | LC_ALL=C sort)
+    add_warn "These files sit DIRECTLY inside a top-level folder, while other folders on this volume use sub-folders — players that read audio at only one folder depth will skip them; move each into a numbered sub-folder:" "$flat_files" \
+      "sits directly inside a top-level folder while other folders use sub-folders — may be skipped; move it into a sub-folder"
+  fi
+fi
+# 4. folder-name rule (only where the manufacturer documents one) — moot when
+# folders are being renamed to simple numbers, which satisfy every such rule
+if [ "$SIMPLE_NAMES" -ne 1 ] && [ -n "$P_DIRNUM" ]; then
+  case "$P_DIRNUM" in
+    bare3)   dre='^[0-9][0-9][0-9]$'; drule="exactly 3 digits (001, 002, …)" ;;
+    prefix3) dre='^[0-9][0-9][0-9]';  drule="a 3-digit numeric prefix (001…, 002-Name)" ;;
+    *)       dre='^[0-9]';            drule="a leading number" ;;
+  esac
+  bad_dirs=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type d -print |
+    awk -F/ -v re="$dre" '$NF !~ re' | sed 's|^\./||' | LC_ALL=C sort)
+  add_warn "These folder names do not follow the documented rule for $plabel ($drule) — they may sort or play out of order:" "$bad_dirs" \
+    "folder name breaks the documented rule for $plabel ($drule) — may sort or play out of order"
+fi
+# 5. name checks — moot when everything is renamed to simple numbers
+if [ "$SIMPLE_NAMES" -ne 1 ]; then
+  mixnum=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
+    awk -F/ '{d=""; for(i=2;i<NF;i++) d=d "/" $i;
+              if ($NF ~ /^[0-9]/) num[d]=1; else { un[d]=1; lines[NR]=$0; dirs[NR]=d }}
+             END {for (r in lines) if (dirs[r] in num) print lines[r]}' | sed 's|^\./||' | LC_ALL=C sort)
+  add_warn "These un-numbered files sit in folders that ALSO contain numbered files — they will sort unpredictably among the numbered ones (give them number prefixes):" "$mixnum" \
+    "un-numbered file in a folder that also has numbered files — sorts unpredictably; give it a number prefix"
+  if [ "$P_MAXNAME" -gt 0 ]; then
+    longn_bare=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \( -type f -o -type d \) "${PAYLOAD_SKIP[@]}" -print |
+      awk -F/ -v m="$P_MAXNAME" 'length($NF) > m' | sed 's|^\./||' | LC_ALL=C sort)
+    longn=""
+    [ -n "$longn_bare" ] && longn=$(printf '%s\n' "$longn_bare" | awk -F/ 'NF {printf "%s  (%d chars)\n", $0, length($NF)}')
+    add_warn "These names are longer than $P_MAXNAME characters — $plabel may truncate or mishandle them (the simple-numbers option avoids this):" "$longn" \
+      "name longer than $P_MAXNAME characters — $plabel may truncate or mishandle it (simple numbers avoids this)" "$longn_bare"
+  fi
+fi
+# 6. empty folders — nothing anywhere inside them will play
+empty_dirs=$(tr '\0' '\n' < "$MANIFEST" | awk '
+  NR % 3 == 1 { k = $0 }
+  NR % 3 == 2 { if (k == "D") dirs[$0] = 1
+                else { p = $0
+                       while (i = match(p, /\/[^\/]*$/)) { p = substr(p, 1, i - 1); ne[p] = 1 } } }
+  END { for (d in dirs) if (!(d in ne)) print d }' | LC_ALL=C sort)
+add_warn "These folders are EMPTY (no audio anywhere inside) — they waste a slot on the player and play nothing:" "$empty_dirs" \
+  "empty folder — nothing inside will play"
+
+# Load the itemized problems once; both preview flavors mark items from these.
+# prob_anc collects every parent folder of a flagged item, so the whole path
+# down to a problem can be marked and pre-expanded.
+prob_paths=(); prob_reasons=(); prob_anc=()
+if [ -s "$PROBLEMS" ]; then
+  while IFS= read -r -d '' pth && IFS= read -r -d '' rsn; do
+    hit=-1
+    for i in ${prob_paths[@]+"${!prob_paths[@]}"}; do
+      if [ "${prob_paths[i]}" = "$pth" ]; then hit=$i; break; fi
+    done
+    if [ "$hit" -ge 0 ]; then prob_reasons[hit]="${prob_reasons[hit]}; $rsn"
+    else prob_paths+=("$pth"); prob_reasons+=("$rsn"); fi
+    a=$pth
+    while [ "${a%/*}" != "$a" ]; do
+      a=${a%/*}
+      seen=0
+      for x in ${prob_anc[@]+"${prob_anc[@]}"}; do
+        if [ "$x" = "$a" ]; then seen=1; break; fi
+      done
+      [ "$seen" -eq 0 ] && prob_anc+=("$a")
+    done
+  done < "$PROBLEMS"
+fi
+# ===== end CONTENT CHECK ================================================
+
+
+# The manifest is in WRITE order; for the tree display, re-key it so every
+# folder's children follow it directly (mapping / to byte 1 sorts a folder's
+# subtree as one contiguous run — plain path sort can interleave a
+# prefix-named sibling, e.g. "A" and "A extra").
+dfs_manifest() {
+  # Sort key: '/' maps to byte 2, and a folder's own key gets a trailing
+  # byte 2 — so the folder sorts immediately before its children and the
+  # whole subtree stays contiguous (plain path sort can interleave a
+  # prefix-named sibling between a folder and its children). Byte 3 joins
+  # the fields; byte 1 is avoided everywhere (bash mangles it in read/IFS).
+  local kind src dest key
   while IFS= read -r -d '' kind && IFS= read -r -d '' src && IFS= read -r -d '' dest; do
-    rel=$src
-    sl=$(printf %s "$rel" | tr -dc /); depth=${#sl}
-    indent=""; i=0; while [ "$i" -lt "$depth" ]; do indent="$indent&nbsp;&nbsp;&nbsp;"; i=$((i+1)); done
-    name=${rel##*/}; en=$name; en=${en//&/&amp;}; en=${en//</&lt;}; en=${en//>/&gt;}
-    if [ "$kind" = "D" ]; then
-      printf '<div class="f">%s&#128193; %s/</div>\n' "$indent" "$en"
-    elif [ "$SIMPLE_NAMES" -eq 1 ]; then
-      dn=${dest##*/}; edn=$dn; edn=${edn//&/&amp;}; edn=${edn//</&lt;}; edn=${edn//>/&gt;}
-      printf '<div class="file">%s&nbsp;&nbsp;&nbsp;<span class="ren">%s</span>  <span class="old">&#8592; %s</span></div>\n' "$indent" "$edn" "$en"
-    else
-      printf '<div class="file">%s&nbsp;&nbsp;&nbsp;%s</div>\n' "$indent" "$en"
-    fi
-  done < "$MANIFEST"
+    key=$(printf '%s' "$src" | tr '/' '\002')
+    [ "$kind" = "D" ] && key="$key"$'\002'
+    printf '%s\003%s\003%s\003%s\0' "$key" "$kind" "$src" "$dest"
+  done < "$MANIFEST" | LC_ALL=C sort -z
 }
 
-# Always state the ordering rule; offer the scrollable preview before disks.
-pmsg="Your files will be written in FILENAME ORDER (A-Z within each folder)."$'\n\n'"To set the play order, put leading-zero number prefixes -- 001, 002, 003 -- in front of the file names."
-[ "$SIMPLE_NAMES" -eq 1 ] && pmsg="$pmsg"$'\n\n'"Simple numbers is on: each file becomes 001, 002, ... on the device, in that order."
+html_esc() { local s=$1; s=${s//&/&amp;}; s=${s//</&lt;}; s=${s//>/&gt;}; printf '%s' "$s"; }
+
+# Scrollable, collapsible HTML preview (opened in the default browser).
+# Folders are <details> nodes: top-level folders start open, deeper ones
+# closed — except that every folder on the path to a flagged item is forced
+# open and marked, and the flagged item carries its specific reason inline.
+PREVIEW_HTML="$STATUS_DIR/write-order-preview.html"
+write_preview() {
+  local key kind src dest depth open_depth sl i x en dn reason isanc oattr cls mark row counts nd nf
+  counts=$(tr '\0' '\n' < "$MANIFEST" | awk 'NR % 3 == 1 {if ($0 == "D") d++; else f++} END {print d+0, f+0}')
+  nd=${counts%% *}; nf=${counts##* }
+  printf '%s\n' \
+    '<!doctype html><meta charset="utf-8"><title>Write-order preview</title>' \
+    '<style>body{font:15px/1.55 -apple-system,Helvetica,Arial,sans-serif;margin:22px;color:#1f2933;max-width:980px}' \
+    'h1{font-size:1.35rem;margin:0 0 .1em}.lead{color:#5c6773;margin:.1em 0 .8em}' \
+    '.tip{background:#eef4fb;border-left:4px solid #4a82c4;padding:9px 13px;border-radius:0 8px 8px 0;margin:10px 0}' \
+    '.tip.bad{background:#fdf0ef;border-left-color:#c0392b}' \
+    'button{font:inherit;padding:4px 14px;border:1px solid #b9c4cf;border-radius:8px;background:#f6f8fa;cursor:pointer;margin-right:8px}' \
+    'button:hover{background:#eef1f4}' \
+    '.tree{margin-top:14px}.tree details{margin-left:1.15em}.tree>details{margin-left:0}' \
+    'summary{cursor:pointer;font-weight:700;padding:2px 8px;border-radius:6px;margin:2px 0}' \
+    'summary:hover{background:#f0f4f8}' \
+    'details.err>summary{background:#fdeaea}details.warn>summary{background:#fff6e0}' \
+    '.file{font-family:ui-monospace,Menlo,monospace;font-size:.9em;margin-left:2.6em;padding:1px 8px;white-space:pre-wrap}' \
+    '.file.err{background:#fdeaea;border-radius:6px}' \
+    '.prob{color:#b3261e;font-weight:600;font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:.85rem;white-space:normal}' \
+    '.ren{color:#0b6b5a;font-weight:600}.old{color:#8a8a8f;font-weight:400}</style>' \
+    '<h1>Preview &#8212; what will be written, in play order</h1>'
+  en=$(html_esc "$PLAYER_PROFILE")
+  printf '<p class="lead">Target player: <strong>%s</strong> &#183; %s folders &#183; %s files &#183; %s flagged</p>\n' \
+    "$en" "$nd" "$nf" "${#prob_paths[@]}"
+  printf '%s\n' "<p><button onclick=\"document.querySelectorAll('details').forEach(function(d){d.open=true})\">Expand all</button><button onclick=\"document.querySelectorAll('details').forEach(function(d){d.open=false})\">Collapse all</button></p>"
+  printf '%s\n' '<div class="tip"><strong>Files play in filename order</strong> (A&#8594;Z) within each folder, top to bottom exactly as shown here. To change the order, add leading-zero number prefixes &#8212; <code>001</code>, <code>002</code>, <code>003</code>&#8230; &#8212; to the names.</div>'
+  [ "$SIMPLE_NAMES" -eq 1 ] && printf '%s\n' '<div class="tip"><strong>Simple numbers is ON:</strong> every folder and file is written as <code>001</code>, <code>002</code>&#8230; (files keep their extension). The device name is shown in <span class="ren">green</span> with the original name after it &#8212; your source folder is never renamed.</div>'
+  [ ${#prob_paths[@]} -gt 0 ] && printf '%s\n' '<div class="tip bad"><strong>&#9940; Problems found:</strong> flagged items show the reason right on the item. Folders marked &#9888;&#65039; contain a flagged item somewhere inside and are pre-expanded down to it.</div>'
+  printf '%s\n' '<div class="tree">'
+  open_depth=0
+  while IFS=$'\003' read -r -d '' key kind src dest; do
+    sl=$(printf %s "$src" | tr -dc /); depth=${#sl}
+    while [ "$open_depth" -gt "$depth" ]; do
+      printf '</details>\n'; open_depth=$((open_depth - 1))
+    done
+    reason=""
+    for i in ${prob_paths[@]+"${!prob_paths[@]}"}; do
+      if [ "${prob_paths[i]}" = "$src" ]; then reason=${prob_reasons[i]}; break; fi
+    done
+    en=$(html_esc "${src##*/}"); dn=$(html_esc "${dest##*/}")
+    if [ "$kind" = "D" ]; then
+      isanc=0
+      for x in ${prob_anc[@]+"${prob_anc[@]}"}; do
+        if [ "$x" = "$src" ]; then isanc=1; break; fi
+      done
+      cls=""; mark=""; oattr=""
+      [ "$depth" -eq 0 ] && oattr=" open"
+      [ "$isanc" -eq 1 ] && { cls=" warn"; mark="&#9888;&#65039; "; oattr=" open"; }
+      [ -n "$reason" ] && { cls=" err"; oattr=" open"; }
+      row="&#128193; $en/"
+      [ "$dest" != "$src" ] && row="&#128193; <span class=\"ren\">$dn/</span> <span class=\"old\">&#8592; $en/</span>"
+      printf '<details class="d%s"%s><summary>%s%s' "$cls" "$oattr" "$mark" "$row"
+      [ -n "$reason" ] && printf ' <span class="prob">&#9940; %s</span>' "$(html_esc "$reason")"
+      printf '</summary>\n'
+      open_depth=$((depth + 1))
+    else
+      cls=""; [ -n "$reason" ] && cls=" err"
+      row=$en
+      [ "$dest" != "$src" ] && row="<span class=\"ren\">$dn</span> <span class=\"old\">&#8592; $en</span>"
+      printf '<div class="file%s">%s' "$cls" "$row"
+      [ -n "$reason" ] && printf ' <span class="prob">&#9940; %s</span>' "$(html_esc "$reason")"
+      printf '</div>\n'
+    fi
+  done < <(dfs_manifest)
+  while [ "$open_depth" -gt 0 ]; do
+    printf '</details>\n'; open_depth=$((open_depth - 1))
+  done
+  printf '%s\n' '</div>'
+}
+
+# Same preview as plain text for the Terminal (SSH / no-GUI runs, where a
+# browser either cannot open or opens on the wrong screen).
+write_preview_text() {
+  local key kind src dest depth sl pad j reason name dn
+  echo
+  echo "WRITE ORDER (top to bottom = play order; '->' = renamed on the device):"
+  while IFS=$'\003' read -r -d '' key kind src dest; do
+    sl=$(printf %s "$src" | tr -dc /); depth=${#sl}
+    pad=""; j=0
+    while [ "$j" -lt "$depth" ]; do pad="$pad   "; j=$((j + 1)); done
+    reason=""
+    for j in ${prob_paths[@]+"${!prob_paths[@]}"}; do
+      if [ "${prob_paths[j]}" = "$src" ]; then reason=${prob_reasons[j]}; break; fi
+    done
+    name=${src##*/}; dn=${dest##*/}
+    if [ "$kind" = "D" ]; then
+      if [ "$dest" != "$src" ]; then printf '%s%s/ -> %s/\n' "$pad" "$name" "$dn"
+      else printf '%s%s/\n' "$pad" "$name"; fi
+    elif [ "$dest" != "$src" ]; then printf '%s   %s -> %s\n' "$pad" "$name" "$dn"
+    else printf '%s   %s\n' "$pad" "$name"; fi
+    [ -n "$reason" ] && printf '%s   !! %s\n' "$pad" "$reason"
+  done < <(dfs_manifest)
+  echo
+}
+
+write_preview > "$PREVIEW_HTML"
+
+# Report the content check: full itemized list in the Terminal; in GUI mode
+# the marked-up preview opens AUTOMATICALLY so the operator sees exactly where
+# each problem sits, then the caution dialog offers Load anyway / Cancel.
+if [ -n "$warn" ]; then
+  echo
+  echo "${cYEL}${cB}CONTENT CHECK ($PLAYER_PROFILE) — may not play as intended:${cR}"
+  printf '%s' "$warnfull"
+  echo
+  if [ "$use_gui" -eq 1 ]; then
+    open "$PREVIEW_HTML" 2>/dev/null
+    osascript -e 'on run {t, m}' \
+      -e 'display dialog m buttons {"Cancel", "Load anyway"} default button "Load anyway" with title t with icon caution' \
+      -e 'end run' "$APP_TITLE — content check: $PLAYER_PROFILE" \
+      "$warn"$'\n'"The write-order preview just opened in your browser with every flagged item marked in place." >/dev/null 2>&1 || { echo "Cancelled at content check."; exit 0; }
+  elif [ -t 0 ]; then
+    write_preview_text
+    printf 'Load anyway? (Y/n): '
+    read -r ans
+    case "$ans" in [Nn]*) echo "Cancelled."; exit 0 ;; esac
+  fi
+else
+  echo "Content check ($PLAYER_PROFILE): no issues found."
+fi
+
+# State the rule once in the Terminal; the erase-confirmation dialog restates
+# it and its "Preview order…" button re-opens the same page on demand, so
+# nothing extra interrupts operators loading batch after batch of the same
+# content.
 echo
 echo "${cB}Files are written in FILENAME ORDER${cR} -- add 001, 002, ... number prefixes to change the play order."
-if [ "$use_gui" -eq 1 ]; then
-  while :; do
-    pbtn=$(osascript -e 'on run {t, m}' \
-      -e 'button returned of (display dialog m buttons {"Cancel", "Show preview", "Looks good"} default button "Looks good" with title t with icon note)' \
-      -e 'end run' "$APP_TITLE -- write order" "$pmsg" 2>/dev/null) || { echo "Cancelled."; exit 0; }
-    case "$pbtn" in
-      "Show preview") write_preview > "$PREVIEW_HTML"; open "$PREVIEW_HTML" 2>/dev/null ;;
-      "Looks good") break ;;
-      *) echo "Cancelled."; exit 0 ;;
-    esac
-  done
-elif [ -t 0 ]; then
-  printf 'Open a full, scrollable preview of the write order in your browser? (y/N): '
-  read -r ans
-  case "$ans" in [Yy]*) write_preview > "$PREVIEW_HTML"; open "$PREVIEW_HTML" 2>/dev/null ;; esac
-fi
-# ===== end write manifest + preview ===================================
+ORDER_NOTE="Files are written in FILENAME ORDER — add number prefixes (001, 002, 003) to set the play order. \"Preview order…\" shows exactly what will be written."
+[ "$SIMPLE_NAMES" -eq 1 ] && ORDER_NOTE="$ORDER_NOTE Simple numbers is ON: every folder and file is written as 001, 002, ... (same order)."
+# ===== end write manifest + content check + preview ====================
 
-if [ "$use_gui" -eq 1 ] && picked=$(gui_pick "${labels[@]}" 2>/dev/null); then
+if [ "$use_gui" -eq 1 ] && picked=$(gui_pick "$PREVIEW_HTML" "$ORDER_NOTE" "${labels[@]}" 2>/dev/null); then
   case "$picked" in
     "" | CANCELLED) echo "Cancelled."; exit 0 ;;
   esac
@@ -651,6 +918,10 @@ else
   i=1
   for l in "${labels[@]}"; do printf '%3d) %s\n' "$i" "$l"; i=$((i + 1)); done
   echo "NOTE: these are whole DISKS — every volume on each disk is erased."
+  if [ -t 0 ]; then
+    read -p "Preview the exact write order here first? (y/N): " ans
+    case "$ans" in [Yy]*) write_preview_text ;; esac
+  fi
   read -p "Erase ALL ${#devices[@]} disks and copy the content onto each? (y/N): " confirm
   [[ $confirm =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
 fi
@@ -685,95 +956,6 @@ payload_b=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \
   xargs -0 stat -f %z 2>/dev/null | awk '{s += $1} END {printf "%d", s}')
 total_k=$(((payload_b + 1023) / 1024))
 [ "$total_k" -gt 0 ] || total_k=1
-
-# ===== CONTENT CHECK (profile-aware, warnings only) =====================
-# Validates the payload against the SELECTED PLAYER's documented rules before
-# anything is erased, and names EVERY offending file/folder by its path
-# relative to the content root, with the reason. The dialog shows the first
-# few per problem; the Terminal always gets the complete list. Warnings never
-# block (specs vary, firmware revisions differ) — the operator reads them and
-# picks Load anyway / Cancel.
-warn=""       # capped version for the dialog
-warnfull=""   # complete version for the terminal
-add_warn() {  # $1 = one-line reason header; $2 = newline-separated relative paths
-  local hdr=$1 list=$2 n shown rest
-  [ -n "$list" ] || return 0
-  n=$(printf '%s\n' "$list" | grep -c .)
-  warnfull="$warnfull• $hdr"$'\n'"$(printf '%s\n' "$list" | sed 's/^/    /')"$'\n'
-  shown=$(printf '%s\n' "$list" | head -8 | sed 's/^/    /')
-  warn="$warn• $hdr"$'\n'"$shown"$'\n'
-  rest=$((n - 8))
-  [ "$rest" -gt 0 ] && warn="$warn    … and $rest more — the complete list is in the Terminal window."$'\n'
-}
-plabel="many players"
-case "$PLAYER_PROFILE" in "Other / not sure") ;; *) plabel="the $PLAYER_PROFILE" ;; esac
-# 1. audio types the selected player is not documented to play
-fmt_re=$(printf '%s' "$P_FORMATS" | tr ' ' '|')
-bad_ext=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
-  awk -v re="\\.(${fmt_re})$" 'tolower($0) !~ re' | sed 's|^\./||' | LC_ALL=C sort)
-add_warn "These files are types $plabel cannot play — they will be silent or skipped (playable: $P_FORMATS):" "$bad_ext"
-# 2. loose audio at the volume's top level
-loose=$(cd "$SRC" && find . -mindepth 1 -maxdepth 1 -type f "${PAYLOAD_SKIP[@]}" -print | sed 's|^\./||' | LC_ALL=C sort)
-add_warn "These files sit at the very top level, outside any folder — most players ignore them:" "$loose"
-# 3. folder depth vs the player's documented structure
-if [ -n "$P_DEPTHS" ]; then
-  bad_depth=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
-    awk -F/ -v ok=" $P_DEPTHS " '{d = NF - 1; if (index(ok, " " d " ") == 0) print}' | sed 's|^\./||' | LC_ALL=C sort)
-  add_warn "These files sit at a folder depth $plabel does not read audio from ($plabel plays files $P_DEPTHS folder level(s) below the content root) — they will be SKIPPED; move each into the expected level (e.g. a numbered sub-folder):" "$bad_depth"
-else
-  # no documented depth for this profile — generic signal: audio directly in a
-  # top-level folder while sibling folders use sub-folders (classic silent-folder cause)
-  nested=""
-  while IFS= read -r dtop; do
-    [ -n "$(cd "$SRC" && find "$dtop" -mindepth 2 -type f "${PAYLOAD_SKIP[@]}" -print 2>/dev/null | head -1)" ] && nested="yes"
-  done < <(cd "$SRC" && find . -mindepth 1 -maxdepth 1 "${PAYLOAD_PRUNE[@]}" -o -type d -print)
-  if [ -n "$nested" ]; then
-    flat_files=$(cd "$SRC" && find . -mindepth 2 -maxdepth 2 -type f "${PAYLOAD_SKIP[@]}" -print | sed 's|^\./||' | LC_ALL=C sort)
-    add_warn "These files sit DIRECTLY inside a top-level folder, while other folders on this volume use sub-folders — players that read audio at only one folder depth will skip them; move each into a numbered sub-folder:" "$flat_files"
-  fi
-fi
-# 4. folder-name rule (only where the manufacturer documents one)
-if [ -n "$P_DIRNUM" ]; then
-  case "$P_DIRNUM" in
-    bare3)   dre='^[0-9][0-9][0-9]$'; drule="exactly 3 digits (001, 002, …)" ;;
-    prefix3) dre='^[0-9][0-9][0-9]';  drule="a 3-digit numeric prefix (001…, 002-Name)" ;;
-    *)       dre='^[0-9]';            drule="a leading number" ;;
-  esac
-  bad_dirs=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type d -print |
-    awk -F/ -v re="$dre" '$NF !~ re' | sed 's|^\./||' | LC_ALL=C sort)
-  add_warn "These folder names do not follow the documented rule for $plabel ($drule) — they may sort or play out of order:" "$bad_dirs"
-fi
-# 5. file-name checks — moot when files are being renamed to simple numbers
-if [ "$SIMPLE_NAMES" -ne 1 ]; then
-  mixnum=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
-    awk -F/ '{d=""; for(i=2;i<NF;i++) d=d "/" $i;
-              if ($NF ~ /^[0-9]/) num[d]=1; else { un[d]=1; lines[NR]=$0; dirs[NR]=d }}
-             END {for (r in lines) if (dirs[r] in num) print lines[r]}' | sed 's|^\./||' | LC_ALL=C sort)
-  add_warn "These un-numbered files sit in folders that ALSO contain numbered files — they will sort unpredictably among the numbered ones (give them number prefixes):" "$mixnum"
-  if [ "$P_MAXNAME" -gt 0 ]; then
-    longn=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o -type f "${PAYLOAD_SKIP[@]}" -print |
-      awk -F/ -v m="$P_MAXNAME" 'length($NF) > m {printf "%s  (%d chars)\n", $0, length($NF)}' | sed 's|^\./||' | LC_ALL=C sort)
-    add_warn "These file names are longer than $P_MAXNAME characters — $plabel may truncate or mishandle them (the simple-numbers option avoids this):" "$longn"
-  fi
-fi
-if [ -n "$warn" ]; then
-  echo
-  echo "${cYEL}${cB}CONTENT CHECK ($PLAYER_PROFILE) — may not play as intended:${cR}"
-  printf '%s' "$warnfull"
-  echo
-  if [ "$use_gui" -eq 1 ]; then
-    osascript -e 'on run {t, m}' \
-      -e 'display dialog m buttons {"Cancel", "Load anyway"} default button "Load anyway" with title t with icon caution' \
-      -e 'end run' "$APP_TITLE — content check: $PLAYER_PROFILE" "$warn" >/dev/null 2>&1 || { echo "Cancelled at content check."; exit 0; }
-  elif [ -t 0 ]; then
-    printf 'Load anyway? (Y/n): '
-    read -r ans
-    case "$ans" in [Nn]*) echo "Cancelled."; exit 0 ;; esac
-  fi
-else
-  echo "Content check ($PLAYER_PROFILE): no issues found."
-fi
-# ===== end CONTENT CHECK ================================================
 
 # STATUS_DIR and the write manifest were created before the disk picker (above)
 # so the write-order preview could be shown before any disk was chosen. cleanup()

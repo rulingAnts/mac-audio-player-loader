@@ -132,23 +132,40 @@
     <li><strong>Shell guard.</strong> Re-exec under <code>/bin/bash</code> if not already running there.</li>
     <li><strong>Volume label prompt.</strong> Asks for the FAT label (default <code>PLAYER</code>); input
       is sanitized to <code>[A-Za-z0-9]</code>, uppercased, truncated to 11 chars. <code>REDO</code> is reserved.</li>
-    <li><strong>File-name mode.</strong> Optional per-run choice: keep original file names, or rename
-      every file on the target to 3-digit numbers in play order (<code>001.mp3</code>…, restarting per
-      directory, extension preserved; folder names and the source are untouched).</li>
+    <li><strong>Name mode.</strong> Optional per-run choice: keep original names, or rename every
+      folder <em>and</em> file on the target to 3-digit numbers in play order (folders <code>001</code>…,
+      files <code>001.mp3</code>… with extension preserved; one counter per directory covers folders and
+      files together, restarting in each directory; the source is untouched). Children of a renamed folder
+      are written under its renamed path.</li>
     <li><strong>Resolve source disk(s).</strong> Determines which physical disk(s) hold the content folder
       (walking APFS synthesized→physical) so they can never be erased.</li>
     <li><strong>Target-player selection.</strong> The operator picks the player model (from the documented
       families in the operator guide) or “Other / not sure”. Encrypted-only players (MegaVoice Envision,
       Davar/Kivah Audibible) are refused with an explanation, before anything is touched.</li>
-    <li><strong>Write manifest &amp; order preview.</strong> Builds one ordered map (source&nbsp;&rarr;&nbsp;device
+    <li><strong>Write manifest.</strong> Builds one ordered map (source&nbsp;&rarr;&nbsp;device
       path) of every folder and file in exact write order, with any simple-numbers renaming applied; both the
-      copy and the optional browser preview read this same manifest, so what the operator previews is exactly
-      what is written. The filename-order rule is also restated in the erase-confirmation dialog.</li>
-    <li><strong>Content check (profile-aware, warnings only).</strong> Validates the payload against the
-      selected player's documented rules — playable file types, the folder depth audio is read from,
-      documented folder-naming and name-length rules — plus generic checks (loose root files, mixed
-      numbered/un-numbered names, inconsistent structure). Warnings offer Cancel / Load anyway; nothing
-      blocks, since firmware revisions vary.</li>
+      copy and the preview read this same manifest, so what the operator previews is exactly what is
+      written.</li>
+    <li><strong>Content check (profile-aware, warnings only).</strong> Runs before any disk is chosen.
+      Validates the payload against the selected player's documented rules — playable file types, the folder
+      depth audio is read from, documented folder-naming and name-length rules — plus generic checks (loose
+      root files, empty folders, mixed numbered/un-numbered names, inconsistent structure). Every finding is
+      itemized per path (path&nbsp;+&nbsp;short reason records): the dialog shows the first few per problem,
+      the Terminal gets the complete list, and the write-order preview marks each flagged item in place.
+      Warnings offer Cancel / Load anyway; nothing blocks, since firmware revisions vary. Name checks are
+      skipped when simple-numbers renaming makes them moot.</li>
+    <li><strong>Order preview.</strong> A self-contained HTML page rendered from the manifest: a collapsible
+      <code>&lt;details&gt;</code> folder tree in play order, original names alongside renamed device names,
+      Expand/Collapse-all controls. Items flagged by the content check carry their specific reason inline;
+      every ancestor folder of a flagged item is marked and pre-expanded, and the page opens automatically
+      when anything is flagged. The tree is re-keyed (<code>/</code>&nbsp;&rarr;&nbsp;byte&nbsp;2, folders
+      keyed just below their children) so a subtree is always contiguous even around prefix-named siblings
+      (<code>A</code> / <code>A extra</code>); the manifest itself stays in true write order. The same
+      preview is available on demand from the erase confirmation's <strong>Preview order…</strong> button
+      (a failed <code>open</code> is contained and never aborts the confirmation), and text-mode runs (SSH)
+      print the tree directly in the Terminal instead of opening a browser. In the erase dialog, Cancel
+      folds into Back (3-button limit): Esc = Back, the re-shown disk list keeps the operator's previous
+      selection, and the list's own Cancel aborts the run.</li>
     <li><strong>Enumerate targets.</strong> Lists external <em>physical</em> disks, skipping the source disk(s)
       and any write-protected (read-only) media. Captures each disk's exact byte size for later re-checks.</li>
     <li><strong>Pick &amp; confirm (two dialogs).</strong> A native list of whole disks (all preselected;

@@ -320,11 +320,11 @@ fi
 PLAYER_PROFILE="Other / not sure"
 if [ "$use_gui" -eq 1 ]; then
   PLAYER_PROFILE=$(osascript -e 'on run {t}' \
-    -e 'set sel to choose from list {"KULUMI X or Mini", "KULUMI Sheep", "MegaVoice Envoy 2 S Series", "MegaVoice Envoy 2 E Series", "MegaVoice Companion or Shield", "MegaVoice Herald", "GRN Saber", "Generic MP3 player", "Other / not sure", "MegaVoice Envision (NOT loadable - encrypted)", "Davar / Kivah Audibible (NOT loadable - encrypted)"} with title t with prompt "Which player will these devices be used in?" & return & "(Used to check your content against that player'"'"'s documented rules before anything is erased.)" default items {"Other / not sure"}' \
+    -e 'set sel to choose from list {"KULUMI X or Mini", "KULUMI Sheep", "MegaVoice Envoy 2 S Series", "MegaVoice Envoy 2 E Series", "MegaVoice Companion or Shield", "MegaVoice Herald", "GRN Saber", "Generic MP3 player", "Other / not sure", "MegaVoice Envision (NOT loadable - encrypted)", "Davar / Kivah Audibible (NOT loadable - encrypted)"} with title t with prompt "Which player is this content for?" & return & "(Used to check your content against that player'"'"'s documented rules before anything is erased.)" default items {"Other / not sure"}' \
     -e 'if sel is false then error number -128' \
     -e 'item 1 of sel' -e 'end run' "$APP_TITLE" 2>/dev/null) || { echo "Cancelled."; exit 0; }
 elif [ -t 0 ]; then
-  echo "Which player will these devices be used in?"
+  echo "Which player is this content for?"
   n=0
   while IFS= read -r line; do n=$((n+1)); printf '  %2d) %s\n' "$n" "$line"; done <<'CHOICES'
 KULUMI X or Mini

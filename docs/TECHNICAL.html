@@ -140,6 +140,10 @@
     <li><strong>Target-player selection.</strong> The operator picks the player model (from the documented
       families in the operator guide) or “Other / not sure”. Encrypted-only players (MegaVoice Envision,
       Davar/Kivah Audibible) are refused with an explanation, before anything is touched.</li>
+    <li><strong>Write manifest &amp; order preview.</strong> Builds one ordered map (source&nbsp;&rarr;&nbsp;device
+      path) of every folder and file in exact write order, with any simple-numbers renaming applied; both the
+      copy and the optional browser preview read this same manifest, so what the operator previews is exactly
+      what is written. The filename-order rule is also restated in the erase-confirmation dialog.</li>
     <li><strong>Content check (profile-aware, warnings only).</strong> Validates the payload against the
       selected player's documented rules — playable file types, the folder depth audio is read from,
       documented folder-naming and name-length rules — plus generic checks (loose root files, mixed

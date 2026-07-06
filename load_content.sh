@@ -1202,7 +1202,7 @@ while :; do
           announced="$announced$dev "
           printf '\r%-78s\r' ' '
           case "$st" in
-            OK*)    echo "  ${cGRN}OK    $dev loaded and ejected — safe to unplug${cR}" ;;
+            OK*)    echo "  ${cGRN}OK    $dev loaded and ejected${cR}" ;;
             CHECK*) echo "  ${cYEL}${cB}CHECK${cR} $dev: ${st#CHECK }" ;;
             *)      echo "  ${cRED}${cB}REDO${cR}  $dev: ${st#REDO }" ;;
           esac

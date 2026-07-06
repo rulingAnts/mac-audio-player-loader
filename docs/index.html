@@ -338,13 +338,18 @@
       <h3>Wait</h3>
       <p>A progress bar shows overall progress and time remaining. As each device finishes
       you'll see a line like:</p>
-      <pre><code>  OK    disk5 loaded and ejected — safe to unplug</code></pre>
-      <p>You may unplug that device right away. The output is <strong>colour-coded</strong> —
-      green for devices that loaded, red for failures. At the end you get a
-      <strong>RESULTS</strong> summary grouped into <span class="tag good">GOOD</span>
-      <span class="tag check">CHECK</span> <span class="tag redo">REDO</span> (see below), and a
-      dialog asking <strong>Run again?</strong> — click <strong>Run again</strong> to do the next batch (or redo
-      failures), or <strong>Done</strong> to stop.</p>
+      <pre><code>  OK    disk5 loaded and ejected</code></pre>
+      <p><strong>Leave everything plugged in until the run finishes.</strong> Mid-run you can't
+      easily tell which physical device a line like <code>disk5</code> is — so don't pull anything
+      yet. The output is <strong>colour-coded</strong> — green for devices that loaded, red for
+      failures. At the end you get a <strong>RESULTS</strong> summary grouped into
+      <span class="tag good">GOOD</span> <span class="tag check">CHECK</span>
+      <span class="tag redo">REDO</span> (see below) and a dialog asking
+      <strong>Run again?</strong> — and <em>then</em> the lights tell you which device is which:
+      <strong>solid</strong> = loaded, <strong>blinking</strong> = failed,
+      <strong>dark</strong> = dead battery. That's the moment to unplug and sort them.
+      Click <strong>Run again</strong> to do the next batch (or redo failures), or
+      <strong>Done</strong> to stop.</p>
       <figure>
         <img class="shot" src="images/08-progress.png" alt="Screenshot: the progress bar running in Terminal">
         <figcaption>The progress bar mid-run</figcaption>
@@ -369,9 +374,11 @@
   </div>
 
   <div class="callout">
-    <strong>To load more devices:</strong> plug in the next batch and repeat from step 4.
-    (Press the <kbd>↑</kbd> Up-Arrow key in Terminal to repeat the previous command, then
-    <kbd>Return</kbd>.)
+    <strong>To load more devices:</strong> if the <strong>Run again?</strong> dialog is still on
+    screen, just swap in the next batch and click <strong>Run again</strong> — no need to start
+    over. Only if you already clicked <strong>Done</strong> (or closed the window): plug in the
+    next batch and repeat from step 4 — pressing the <kbd>↑</kbd> Up-Arrow key in Terminal
+    repeats the previous command, then <kbd>Return</kbd>.
   </div>
 
   <figure>

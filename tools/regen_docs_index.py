@@ -19,7 +19,7 @@ MAPPING = [
     ("onto the Terminal window", "03-drag-script.png"),
     ("Dock icon", "03b-drag-to-dock.png"),
     ("volume-label dialog", "04-label.png"),
-    ("external disks detected", "05-count.png"),
+    ("target disks detected", "05-count.png"),
     ("disk chooser list", "06-choose.png"),
     ("erase/keep confirmation", "07-confirm.png"),
     ("progress bar running", "08-progress.png"),

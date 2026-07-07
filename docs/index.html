@@ -60,7 +60,7 @@
   td code{white-space:nowrap;}
   .tag{display:inline-block; font-weight:700; font-size:.8rem; padding:.1em .5em; border-radius:5px;}
   .tag.good{background:#e4f5ea; color:#1a7a43;}
-  .tag.check{background:#fdf3d8; color:#8a6d1a;}
+  .tag.check{background:#fdf3d8; color:#7a6017;}
   .tag.redo{background:#fbe4e4; color:#a83232;}
   footer{margin-top:40px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--line); padding-top:14px;}
   /* --- Tabs: Using the Loader / Player-Specific Setup (pure CSS, no JS) --- */
@@ -117,10 +117,12 @@
   which disks are erased, and you confirm before anything happens.</p>
 
   <div class="callout warn">
-    <strong>⚠️ It erases whole DISKS.</strong> If a disk has several partitions or
-    volumes on it, <strong>all</strong> of them are wiped together. Unplug any drive
-    you do <strong>not</strong> want erased (backup drives, etc.) before you start —
-    the chooser also lets you deselect them.
+    <strong>⚠️ It erases whole DISKS.</strong> One physical drive can show up on your
+    Mac under several different names — this tool erases the <strong>whole drive</strong>:
+    everything, under every one of those names, together. Unplug any drive you do
+    <strong>not</strong> want erased (backup drives, etc.) before you start — and you can
+    also un-tick any drive in the list the loader shows you before it erases anything
+    (step 9).
   </div>
 
   <div class="callout info">
@@ -154,7 +156,7 @@
 
     <li>
       <h3>Put the loader in your content folder</h3>
-      <p>Unzip the download to get <code>load_content.sh</code>. Then put that file
+      <p>Double-click the downloaded <code>.zip</code> file to unzip it — that gives you <code>load_content.sh</code>. Then put that file
       <strong>inside your content folder</strong> — the one that holds your numbered audio folders
       (<code>001&nbsp;…</code>, <code>002&nbsp;…</code>), exactly as shown below. The loader copies
       whatever sits <strong>in its own folder</strong> onto the devices, so it has to live right
@@ -163,7 +165,7 @@
       — just open that folder.)</p>
       <div class="callout info">
         🎯 <strong>Setting up your content folder for a specific player?</strong>
-        <label for="rt-players" class="tablink">Click here for your device model's setup</label> — how to
+        <label for="rt-players" class="tablink">Open the <strong>Player-Specific Setup</strong> tab (at the top of this page) for your device model</label> — how to
         structure the folders, name the files, and which audio format and cable or card reader your player
         needs.
       </div>
@@ -175,8 +177,9 @@
 
     <li>
       <h3>Plug in the devices</h3>
-      <p>Plug in the USB hub with the devices to be loaded. (A <strong>powered</strong> hub is
-      best — bus power alone rarely runs many devices at once.)</p>
+      <p>Plug in the USB hub with the devices to be loaded. (A <strong>powered</strong> hub — one
+      with its own wall plug — is best; a hub running only off the Mac's power rarely keeps
+      many devices going at once.)</p>
       <p>Loading an <strong>SD or microSD card</strong> for a player that takes one? Cards work too —
       in your Mac's built-in card slot (with a microSD&rarr;SD adapter as needed) or in any USB card
       reader. Make sure the card's little <strong>lock slider</strong> is off — locked cards are
@@ -230,6 +233,9 @@
     <li>
       <h3>Press Return</h3>
       <p>Click the Terminal window and press <kbd>Return</kbd>.</p>
+      <p>The first time you run the loader, the Mac itself may ask whether Terminal can access
+      your files or a removable volume — click <strong>OK</strong> (or <strong>Allow</strong>)
+      each time. The loader can't see your devices without it.</p>
     </li>
 
     <li>
@@ -258,20 +264,21 @@
         <li><strong>Which player?</strong> — pick your player model from a list. The loader then checks
         your content against <em>that player's</em> documented rules (folder depth, file types, naming)
         before anything is erased. Pick <strong>Other / not sure</strong> for generic checks only.
-        Choosing a player this tool cannot load (encrypted-only models like the MegaVoice Envision or
-        Davar/Kivah Audibible) explains why and stops safely.
+        If you pick a player this tool cannot load (an encrypted-only model like the MegaVoice
+        Envision or Davar/Kivah Audibible), the loader explains why and stops safely — nothing
+        gets erased.
       <figure>
         <img class="shot"  src="images/12-player.png" alt="Screenshot: the player picker list with the documented player families">
         <figcaption>Pick the player these devices are for</figcaption>
       </figure>
         </li>
-        <li><strong>Content check</strong> — if the loader spots things that often will not play
-        (audio sitting directly inside a top-level folder when a player expects an album sub-folder,
-        file types like <code>.m4a</code> that many players cannot decode, empty folders, folders mixing
-        numbered and un-numbered names), a caution box lists every offending file by name — and the
-        write-order preview opens automatically with each flagged item marked <strong>right where it
-        sits</strong> in the tree, the specific reason written on the item, and every parent folder down
-        to it flagged and pre-expanded. Read it — then <strong>Load anyway</strong>, or
+        <li><strong>Content check</strong> — the loader looks for things that often will not play:
+        audio files sitting directly inside a top-level folder (many players need an album sub-folder),
+        file types like <code>.m4a</code> that many players cannot decode, empty folders, and folders
+        that mix numbered and un-numbered names. If it finds any, a caution box lists every offending
+        file by name. The write-order preview also opens automatically, with each flagged item marked
+        <strong>right where it sits</strong> in the tree — the reason written on the item, and every
+        folder above it opened for you. Read it — then <strong>Load anyway</strong>, or
         <strong>Cancel</strong> and fix the folder first.
         <br><small>💡 Files are written to the devices <strong>in filename order</strong> — add
         <code>001</code>, <code>002</code>… prefixes to set the play order. You can also open this
@@ -292,12 +299,13 @@
 
     <li>
       <h3>Confirm the device count</h3>
-      <p>A message tells you how many external disks were found, with buttons
+      <p>A message tells you how many target disks were found (it counts your USB devices
+      and SD cards), with buttons
       <strong>Cancel / Show in Finder / Choose disks…</strong>. "Show in Finder" opens
       the drives so you can peek at what's on them; the message then comes back. Click
       <strong>Choose disks…</strong> to continue.</p>
       <figure>
-        <img class="shot" src="images/05-count.png" alt="Screenshot: the 'N external disks detected' dialog">
+        <img class="shot" src="images/05-count.png" alt="Screenshot: the 'N target disks detected' dialog">
         <figcaption>How many devices were found</figcaption>
       </figure>
     </li>
@@ -305,7 +313,7 @@
     <li>
       <h3>Pick which disks to load</h3>
       <p>A list appears. <strong>Each row is one DISK</strong>, shown with its size and
-      the names of all volumes on it. <strong>All disks start selected.</strong> If you
+      the name(s) it shows up under in Finder. <strong>All disks start selected.</strong> If you
       see a disk you want to <strong>keep</strong> (for example a backup drive), hold
       <kbd>Cmd</kbd> and click that row to deselect it. Then click
       <strong>Continue…</strong>.</p>
@@ -319,23 +327,24 @@
       <h3>Read and confirm</h3>
       <p>A final message shows exactly which disks will be <strong>ERASED</strong> and
       which will be <strong>KEPT</strong>, and reminds you that files are written in
-      <strong>filename order</strong>. Read it! Then click <strong>Erase &amp; Load</strong> —
-      or <strong>Preview order…</strong> to open the write-order preview in your browser first, or
-      <strong>Back</strong> to change the selection (your choices are kept; pressing
-      <kbd>Esc</kbd> also goes back, and the disk list's Cancel button aborts the run).</p>
+      <strong>filename order</strong>. Read it! Then click <strong>Erase &amp; Load</strong>.
+      Not ready yet? <strong>Preview order…</strong> opens the write-order preview in your browser
+      first, and <strong>Back</strong> returns to the disk list with your choices kept.
+      (Pressing <kbd>Esc</kbd> also goes back; the disk list's <strong>Cancel</strong> button stops
+      the whole run.)</p>
       <p><strong>Preview order…</strong> shows a collapsible folder tree of exactly what will be
       written, top to bottom in play order — original names alongside the renamed device names when
       <strong>Simple numbers</strong> is on. Expand or collapse any folder, or use the
       <em>Expand all / Collapse all</em> buttons. (It is the same page that opens automatically when
-      the content check finds problems — one write manifest drives both the preview and the copy, so
-      what you preview is exactly what is written.)</p>
+      the content check finds problems — and the preview and the copy are built from one and the
+      same file list, so what you preview is exactly what is written.)</p>
       <figure>
-        <img class="shot"  src="images/07-confirm.png" alt="Screenshot: the final erase/keep confirmation dialog"
+        <img class="shot"  src="images/07-confirm.png" alt="Screenshot: the final erase/keep confirmation dialog">
         <figcaption>Final confirmation — <strong>Preview order…</strong> opens the write-order tree</figcaption>
       </figure>
       <figure>
-        <img class="shot"  src="images/15-preview-renamed.png" alt="Screenshot: the write-order preview page with simple numbers on, green renamed names beside the originals">
-        <figcaption><strong>Preview order…</strong> opens this page — with <strong>Simple numbers</strong> on, device names are green, originals beside them</figcaption>
+        <img class="shot"  src="images/15-preview-renamed.png" alt="Screenshot: the write-order preview page with simple numbers on — each row shows the new device name first, in green, with the original name after it">
+        <figcaption><strong>Preview order…</strong> opens this page. With <strong>Simple numbers</strong> on, each row shows the new device name first (in green) with the original name after it</figcaption>
       </figure>
     </li>
 
@@ -346,11 +355,14 @@
       <pre><code>  OK    disk5 loaded and ejected</code></pre>
       <p><strong>Leave everything plugged in until the run finishes.</strong> Mid-run you can't
       easily tell which physical device a line like <code>disk5</code> is — so don't pull anything
-      yet. The output is <strong>colour-coded</strong> — green for devices that loaded, red for
-      failures. At the end you get a <strong>RESULTS</strong> summary grouped into
+      yet. The output is <strong>colour-coded</strong> — green for loaded, red for failures — but you
+      don't need the colours: every line also starts with the word <code>OK</code> or
+      <code>REDO</code>, so the words alone tell you which is which. (<em>Ejected</em> means the
+      Mac has safely let go of a device — but leave it plugged in until the whole run finishes.)
+      At the end you get a <strong>RESULTS</strong> summary grouped into
       <span class="tag good">GOOD</span> <span class="tag check">CHECK</span>
-      <span class="tag redo">REDO</span> (see below) and a dialog asking
-      <strong>Run again?</strong> — and <em>then</em> the lights tell you which device is which:
+      <span class="tag redo">REDO</span> (see below), and a dialog asks
+      <strong>Run again?</strong> <em>Now</em> the lights tell you which device is which:
       <strong>solid</strong> = loaded, <strong>blinking</strong> = failed,
       <strong>dark</strong> = dead battery. That's the moment to unplug and sort them.
       Click <strong>Run again</strong> to do the next batch (or redo failures), or
@@ -360,12 +372,10 @@
         <figcaption>The progress bar mid-run</figcaption>
       </figure>
       <div class="callout">
-        💡 <strong>The devices blink while they load — that's normal.</strong> Their lights flicker as
-        data is written. What matters is the light <strong>after the run finishes:</strong> a device the
-        tool flags as failed is made to keep blinking, so a light <strong>still blinking</strong> once the
-        run ends means that device failed; a <strong>steady/solid</strong> light means it finished; and
-        <strong>no light at all</strong> means
-        its battery died (it failed too). See <em>When some devices fail</em>, below.
+        💡 <strong>The devices blink while they load — that's normal.</strong> Their lights flicker
+        as data is written, and the tool deliberately makes a <em>failed</em> device <strong>keep
+        blinking</strong> after the run ends so you can spot it. The light that matters is the one
+        <em>after</em> the run finishes — see <em>When some devices fail</em>, below.
       </div>
     </li>
   </ol>
@@ -382,8 +392,9 @@
     <strong>To load more devices:</strong> if the <strong>Run again?</strong> dialog is still on
     screen, just swap in the next batch and click <strong>Run again</strong> — no need to start
     over. Only if you already clicked <strong>Done</strong> (or closed the window): plug in the
-    next batch and repeat from step 4 — pressing the <kbd>↑</kbd> Up-Arrow key in Terminal
-    repeats the previous command, then <kbd>Return</kbd>.
+    next batch and repeat from step 4. (Shortcut: click the Terminal window, press the
+    <kbd>↑</kbd> Up-Arrow key — your previous command reappears — then press <kbd>Return</kbd>.
+    That replaces steps 4–6.)
   </div>
 
   <figure>
@@ -406,7 +417,7 @@
     <tr>
       <td><span class="tag check">CHECK</span></td>
       <td>The content copied fine, but something needs a look (for example it could not
-      eject — eject it in Finder, then unplug).</td>
+      eject — in the Finder sidebar, click the little ⏏ symbol next to its name; when it disappears from the list, unplug).</td>
     </tr>
     <tr>
       <td><span class="tag redo">REDO</span></td>
@@ -422,7 +433,7 @@
 
   <figure>
     <img class="shot" src="images/run-again-redo.png" alt="Screenshot: the Run again dialog after a run where some devices failed">
-    <figcaption>…and the matching <strong>Run again?</strong> dialog, sorting devices into three piles by their light: still-blinking (failed) stay connected; solid (loaded) and dark (dead battery) come off.</figcaption>
+    <figcaption>…and the matching <strong>Run again?</strong> dialog after a run with failures — how to sort the devices by their lights comes next.</figcaption>
   </figure>
 
   <p><strong>Easiest way to finish a batch:</strong> when the run ends, a dialog asks
@@ -437,14 +448,8 @@
   <h3>Which physical device failed?</h3>
   <p>When the run finishes with failures, the script helps you find them two ways,
   automatically:</p>
-  <p><small>💡 A third confirmation, free of charge: successful devices are ejected, failed ones are
-  deliberately left mounted — so if pulling a device makes your Mac complain <em>"Disk Not Ejected
-  Properly"</em>, that toast just told you it was one of the <strong>failed</strong> ones. Devices that
-  loaded fine come out silently.</small></p>
   <p><strong>1. The still-blinking lights are the failures — so leave those plugged in.</strong>
-  Every device blinks <em>while</em> it loads; the ones <strong>still blinking</strong> once the run has
-  finished (when the pop-up appears) are the ones that failed. So do the <em>opposite</em> of unplugging
-  those: leave the still-blinking devices connected, and take out the rest and sort them by their light:</p>
+  Take out everything else and sort it by its light:</p>
   <ul>
     <li><strong>Steady / solid light — finished.</strong> These loaded and were ejected. Unplug them
     and set them aside as your <strong>done</strong> pile. (Still test them later — see
@@ -455,17 +460,10 @@
     <li><strong>Still blinking — failed; leave it connected.</strong> This is a
     <span class="tag redo">REDO</span> device and stays for the next round.</li>
   </ul>
-  <p>Your hub now holds only the <strong>still-blinking</strong> devices. Plug in a fresh
-  batch of new devices now too if you want, then click <strong>Run again</strong> — it redoes the
-  still-blinking failures (and loads any new ones). Repeat until nothing is left blinking. Choose
-  <strong>Done</strong> when you're finished.</p>
+  <p>Then pick up at <em>Easiest way to finish a batch</em>, above — click
+  <strong>Run again</strong> and repeat until nothing is left blinking.</p>
   <div class="callout warn">
-    ⚠️ <strong>Also watch for dark devices.</strong> A device whose battery died or that
-    switched off mid-copy shows <strong>no light at all</strong> — not blinking. It failed too
-    and must be redone. A <strong>steady/solid light</strong> means the device finished — but
-    still check its content before distributing.
-    <br><br>
-    <strong>Charge a dark device before reloading it.</strong> The loading cable and hub may carry
+    ⚠️ <strong>Charge a dark device before reloading it.</strong> The loading cable and hub may carry
     data only and <strong>not deliver a charge</strong>, so simply plugging a dead device back in
     may not wake it. Charge it <strong>fully first</strong> — in the sun, or with a proper charging
     cable — then reconnect it to reload.
@@ -480,7 +478,7 @@
   </div>
 
   <p><strong>2. It marks them in Finder — and macOS helps you avoid pulling the wrong one.</strong>
-  The failed devices stay <strong>mounted</strong> and are renamed <code>REDO</code>. Open a Finder
+  The failed devices stay <strong>connected and visible in Finder</strong> and are renamed <code>REDO</code>. Open a Finder
   window and watch the list under your Mac's name (e.g. <em>"Seth's MacBook Pro"</em>) as you unplug —
   the <strong>only</strong> USB volumes still shown there are the failed <code>REDO</code> ones.</p>
   <ul>
@@ -507,7 +505,7 @@
     <li>Pull the failed (<strong>REDO</strong>) devices first (see above), so they're out
     of the way.</li>
     <li>Unplug and re-plug the rest — or just re-plug the whole hub — and confirm each one
-    comes back mounted with the label you chose (e.g. <strong>PLAYER</strong>).</li>
+    shows up again in Finder with the name you chose (e.g. <strong>PLAYER</strong>).</li>
     <li>One device at a time is the most reliable check.</li>
   </ol>
   <div class="callout info">
@@ -579,14 +577,13 @@
 
   <section class="tab-panel" id="panel-players" role="tabpanel" aria-labelledby="tab-players">
   <h2>Player-Specific Setup</h2>
-<p>The loader tool itself is <strong>player-agnostic</strong>. It makes a clean, full-size FAT32 volume on each device you select and copies your numbered folders onto it in play order. It does not know or care what brand of player you own. This tab is about matching <em>your source folder and your hardware</em> to <em>your specific player</em> — the folder layout, the filenames, the audio format, and the cable or card reader that particular family expects.</p>
+<p>The loader tool itself works the same for every brand of player. It wipes each device you select, gives it a fresh standard format (FAT32 — the format nearly every simple player reads), and copies your numbered folders onto it in play order. This tab is about matching <em>your source folder and your hardware</em> to <em>your specific player</em> — the folder layout, the filenames, the audio format, and the cable or card reader that particular family expects.</p>
 
 <p>The author is actively expanding the list of tested players. Where a family below is marked <strong>not yet tested</strong>, that is an invitation to try it, not a verdict against it: it will very likely work as long as you set up the source folder structure, filenames, and audio format the way that player expects. As a rule of thumb, the author expects this tool to load essentially any device that GRN/MegaVoice's <strong>SaberCopy</strong> can load, given the right folder structure and format.</p>
 
 <p>The loader itself uses this research: at the start of each run it asks <strong>which player</strong>
 you are loading and checks your content folder against that player's documented rules before anything
-is erased — and if you pick one of the encrypted-only models below, it explains why no plain file
-copier can load it and stops.</p>
+is erased.</p>
 
 <h2>Will my player work?</h2>
 
@@ -623,7 +620,7 @@ copier can load it and stops.</p>
 
 <div class="callout"><strong>KULUMI Mini — confirmed working with this tool</strong> (verified loading over Hope Tech Global's <strong>red</strong> data cable). Some Mini variants have a removable microSD card and some do not, but <strong>all variants load via the cable</strong>. The cleanest path is the open-slot version: pull the microSD, load it in a card reader, return it — no special cable needed.</div>
 
-<div class="callout info"><strong>Why the KULUMI folder order matters.</strong> Hope Tech Global's own loader notes that a KULUMI "plays back in the order that it was copied in" — copy order, not a firmware name-sort. That is exactly what this tool guarantees: it lays your files down onto a fresh volume in sorted name order, so copy order and play order match. Number your folders and tracks with leading zeros.</div>
+<div class="callout info"><strong>Why the KULUMI folder order matters.</strong> Hope Tech Global's own loader notes that a KULUMI "plays back in the order that it was copied in" — copy order, not a firmware name-sort. That is exactly what this tool guarantees — see <em>General guidance for any player</em>, below, for the numbering rules. Number your folders and tracks with leading zeros.</div>
 
 <div class="callout warn"><strong>Two KULUMI gotchas that make a whole folder silent.</strong> (1) Audio must sit
 <strong>inside an album sub-folder</strong> — files placed directly in a top-level category folder are skipped
@@ -722,7 +719,7 @@ warns about both patterns before anything is erased.</div>
 </tr>
 </table></div>
 
-<div class="callout warn"><strong>Watch which volume you erase.</strong> Over the SLS cable a MegaVoice player can present <em>two</em> volumes at once — its internal memory and an inserted card — so read the chooser and the “ERASE / KEEP” summary carefully. If you only want to load a card, taking it out and using a standalone USB card reader keeps things unambiguous. The <strong>Envision is the exception</strong> to all of this: it plays only encrypted files, so a plain MP3 copy is ignored — use MegaVoice's own tooling for it.</div>
+<div class="callout warn"><strong>Watch which volume you erase.</strong> Over the SLS cable a MegaVoice player can present <em>two</em> volumes at once — its internal memory and an inserted card — so read the chooser and the “ERASE / KEEP” summary carefully. If you only want to load a card, taking it out and using a standalone USB card reader keeps things unambiguous.</div>
 
 <p><strong>Loading / programming documentation (per model):</strong></p>
 <ul>
@@ -762,7 +759,7 @@ warns about both patterns before anything is erased.</div>
 <ol>
 <li>Plug in the device (or its memory card in a USB reader).</li>
 <li>In the <strong>Finder</strong>, click the device where it appears in the sidebar (under <em>Locations</em>).</li>
-<li>Press <kbd>Cmd</kbd>-<kbd>I</kbd> (or the menu <strong>File ▸ Get Info</strong>).</li>
+<li>Press <kbd>Cmd</kbd> + <kbd>I</kbd> (or the menu <strong>File ▸ Get Info</strong>).</li>
 <li>Read the <strong>“Format:”</strong> line near the top of the window.</li>
 </ol>
 <p>(Or open <strong>Disk Utility</strong> — Applications ▸ Utilities ▸ Disk Utility — and click the volume; its format shows just under the name.)</p>

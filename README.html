@@ -613,7 +613,7 @@ copier can load it and stops.</p>
 <tr><th>&nbsp;</th><th>KULUMI Mini</th><th>KULUMI X</th><th>KULUMI Sheep</th></tr>
 <tr><td>What it is</td><td>Solar lamp + audio player + FM + phone charger</td><td>Pocket solar player (IP65)</td><td>Audio player in a plush sheep (for children)</td></tr>
 <tr><td>Loads via</td><td>Removable microSD in a USB card reader (open-slot version) <em>or</em> the cable</td><td>USB drive mode over the cable (no removable card)</td><td>USB drive mode over the cable (no removable card)</td></tr>
-<tr><td>Cable / hardware</td><td>Standard USB microSD reader (easiest), or Hope Tech Global's proprietary <strong>green or red</strong> data cable</td><td>Hope Tech Global's proprietary <strong>green or red</strong> data cable</td><td>Hope Tech Global's <strong>special programming cable</strong> (a normal cable shows nothing)</td></tr>
+<tr><td>Cable / hardware</td><td>Standard USB microSD reader (easiest), or Hope Tech Global's proprietary data cable</td><td>Hope Tech Global's proprietary data cable</td><td>Hope Tech Global's <strong>special programming cable</strong> (a normal cable shows nothing)</td></tr>
 <tr><td>Filesystem</td><td>FAT32</td><td>FAT32</td><td>FAT32</td></tr>
 <tr><td>Folder structure</td><td>3 levels: category → title/album → MP3</td><td>3 levels: category → title/album → MP3</td><td>2 levels: title/album → MP3 (shallower)</td></tr>
 <tr><td>Filenames</td><td>Numbered with leading zeros (001, 002…) so they sort in play order; plain ASCII</td><td>Numbered with leading zeros; plain ASCII</td><td>Numbered with leading zeros; plain ASCII</td></tr>
@@ -621,7 +621,7 @@ copier can load it and stops.</p>
 <tr><td>Verdict</td><td><strong>Tested &amp; verified</strong></td><td>Not yet tested — expected to work</td><td>Not yet tested — expected to work</td></tr>
 </table></div>
 
-<div class="callout"><strong>KULUMI Mini — confirmed working with this tool.</strong> The developer has tested and verified it. It loads over Hope Tech Global's <strong>red</strong> data cable as well as the green. Some Mini variants have a removable microSD card and some do not, but <strong>all variants load via the cable</strong>. The cleanest path is the open-slot version: pull the microSD, load it in a card reader, return it — no special cable needed.</div>
+<div class="callout"><strong>KULUMI Mini — confirmed working with this tool</strong> (verified loading over Hope Tech Global's <strong>red</strong> data cable). Some Mini variants have a removable microSD card and some do not, but <strong>all variants load via the cable</strong>. The cleanest path is the open-slot version: pull the microSD, load it in a card reader, return it — no special cable needed.</div>
 
 <div class="callout info"><strong>Why the KULUMI folder order matters.</strong> Hope Tech Global's own loader notes that a KULUMI "plays back in the order that it was copied in" — copy order, not a firmware name-sort. That is exactly what this tool guarantees: it lays your files down onto a fresh volume in sorted name order, so copy order and play order match. Number your folders and tracks with leading zeros.</div>
 
@@ -634,7 +634,7 @@ to MP3 first (the Music app's <em>“Create MP3 Version”</em> works). The load
 warns about both patterns before anything is erased.</div>
 
 <ul>
-<li><strong>KULUMI X:</strong> ~8 GB fixed storage (the maker calls it internal memory; an independent SIL review calls it an enclosed microSD — either way it is not user-removable, so there is no card-reader fallback). It should present as a FAT32 drive over the green/red data cable; confirm your first unit mounts writable on your Mac before a batch.</li>
+<li><strong>KULUMI X:</strong> ~8 GB fixed storage (the maker calls it internal memory; an independent SIL review calls it an enclosed microSD — either way it is not user-removable, so there is no card-reader fallback). It should present as a FAT32 drive over Hope Tech Global's data cable; confirm your first unit mounts writable on your Mac before a batch.</li>
 <li><strong>KULUMI Mini:</strong> cards can be hardware <strong>write-locked</strong> as an anti-tamper measure. A locked card is read-only and this tool will skip it — use an <em>unlocked</em> card in the open slot.</li>
 <li><strong>KULUMI Sheep:</strong> requires the special programming cable; a normal or charge-only cable exposes nothing. It has no removable card, so the cable is the only path. Confirm it mounts writable on your Mac with that cable before committing a batch.</li>
 </ul>

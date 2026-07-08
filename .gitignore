@@ -3,3 +3,5 @@
 *.zip
 .Spotlight-V100
 .fseventsd
+# Compiled AppleScript artifacts — we ship the .applescript source, not these.
+*.scpt

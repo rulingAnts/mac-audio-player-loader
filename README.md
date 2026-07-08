@@ -6,7 +6,7 @@
 [![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey.svg)](#requirements)
 [![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#requirements)
 
-Audio Player Loader is a single macOS command-line script that erases a hub full of external USB audio players (MegaVoice-style devices, or anything that reads a FAT filesystem) and copies a folder of audio content onto all of them at once, in parallel. Non-technical operators run it by dragging the script onto Terminal — it drives native macOS dialogs from there.
+Audio Player Loader is a single macOS command-line script that erases a hub full of external USB audio players (MegaVoice-style devices, or anything that reads a FAT filesystem) and copies a folder of audio content onto all of them at once, in parallel. Non-technical operators start it by double-clicking a launcher and pressing one Run button (or, if they prefer, by dragging the script onto Terminal); from there it drives native macOS dialogs.
 
 The loaders for these players are almost all Windows programs; this is the **native-Mac alternative** — nothing to download, no emulation, no Windows. It uses only software that already ships on every Mac.
 
@@ -26,7 +26,7 @@ The low-cost audio players used in field and ministry work — MegaVoice and sim
 
 Those Windows tools are not broken — they work fine, on Windows. The problem has simply been that there was no good **native macOS** way to do the same job. That is the gap this tool fills.
 
-Audio Player Loader is that native path. It uses **only what already ships on every Mac** — the built-in Terminal and bash, plus Apple's own `diskutil` and standard file tools. There is nothing to download, no emulation layer, and no Windows involved. Plug in a hub of devices, drag the script onto Terminal, and go. Parallels, CrossOver, and Wine become things you no longer need — not things you have to set up.
+Audio Player Loader is that native path. It uses **only what already ships on every Mac** — the built-in Terminal and bash, plus Apple's own `diskutil` and standard file tools. There is nothing to download, no emulation layer, and no Windows involved. Plug in a hub of devices, double-click the launcher, press Run, and go. Parallels, CrossOver, and Wine become things you no longer need — not things you have to set up.
 
 ![The disk chooser: each row is one physical disk, all preselected, Cmd-click to keep](images/06-choose.png)
 

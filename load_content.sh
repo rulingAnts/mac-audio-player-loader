@@ -406,7 +406,9 @@ SELF="$(basename "$SELF_PATH")"
 PAYLOAD_PRUNE=( \( -name '*.app' -o -name '.fseventsd' -o -name '.Spotlight-V100'
                    -o -name '.Trashes' -o -name '.TemporaryItems' -o -path './images' \) -prune )
 PAYLOAD_SKIP=( ! -name "$SELF" ! -name '*.zip'
-               ! -name '*.cmd' ! -name '*.CMD' ! -name '*.txt' ! -name '*.TXT'
+               ! -name '*.cmd' ! -name '*.CMD' ! -name '*.command'
+               ! -name '*.applescript' ! -name '*.scpt'
+               ! -name '*.txt' ! -name '*.TXT'
                ! -name '*.md' ! -name '*.html'
                ! -name '._*' ! -name '.DS_Store' ! -name '.metadata_never_index' )
 

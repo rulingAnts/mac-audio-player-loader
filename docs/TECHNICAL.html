@@ -131,6 +131,16 @@
   <h2 id="flow">4. Operational flow</h2>
   <ol class="flow">
     <li><strong>Shell guard.</strong> Re-exec under <code>/bin/bash</code> if not already running there.</li>
+    <li><strong>Launch.</strong> Two entry points, same engine. Primary: a tiny sidecar AppleScript
+      (<code>Load&nbsp;Audio&nbsp;Players.applescript</code>) that the operator double-clicks and Runs in
+      Script&nbsp;Editor; it resolves its own folder via <code>path to me</code>, verifies
+      <code>load_content.sh</code> sits beside it, and issues
+      <code>tell&nbsp;application&nbsp;"Terminal"&nbsp;to&nbsp;do&nbsp;script&nbsp;"/bin/bash&nbsp;&lt;loader&gt;"</code> —
+      so the whole run happens in a real Terminal/TTY (live progress bar, colours, prompts, signal traps),
+      identical to the manual <em>drag-onto-Terminal</em> path which remains the fallback. The wrapper is a
+      script <em>document</em>, not an app bundle, so a downloaded copy is not Gatekeeper-blocked; the only
+      first-run prompt is the one-time "control Terminal" automation consent. Both launcher and loader are
+      excluded from the device payload.</li>
     <li><strong>Volume label prompt.</strong> Asks for the FAT label (default <code>PLAYER</code>); input
       is sanitized to <code>[A-Za-z0-9]</code>, uppercased, truncated to 11 chars. <code>REDO</code> is reserved.</li>
     <li><strong>Name mode.</strong> Optional per-run choice: keep original names, or rename every

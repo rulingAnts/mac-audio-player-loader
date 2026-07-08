@@ -32,6 +32,7 @@ MAPPING = [
     ("content-check caution dialog", "13-content-check.png"),
     ("flagged write-order preview", "14-preview-flagged.png"),
     ("preview page with simple numbers", "15-preview-renamed.png"),
+    ("launcher open in Script Editor", "16-script-editor.png"),
 ]
 
 DATA_RE = re.compile(r'src="data:image/(?:png|jpeg);base64,[^"]*"')

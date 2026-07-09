@@ -396,8 +396,37 @@ while [ -L "$SELF_PATH" ]; do
     *)  SELF_PATH="$(dirname "$SELF_PATH")/$link" ;;
   esac
 done
-SRC="$(cd "$(dirname "$SELF_PATH")" && pwd)"
 SELF="$(basename "$SELF_PATH")"
+SELF_DIR="$(cd "$(dirname "$SELF_PATH")" && pwd)"
+
+# --- Where is the audio content? -----------------------------------------
+# The loader does NOT have to live in the content folder. Source order:
+#   1. a folder path passed as the first argument — used by the run-again
+#      restart to keep the SAME folder, and available to power users;
+#   2. GUI: a native "Choose folder" dialog. It opens at the loader's own
+#      folder, so keeping the content beside the loader still works (just
+#      pick that folder); otherwise navigate to wherever the content lives;
+#   3. text / SSH: a typed path (Return alone = the loader's own folder).
+if [ -n "${1:-}" ] && [ -d "$1" ]; then
+  SRC="$1"
+elif [ "$use_gui" -eq 1 ]; then
+  SRC=$(osascript \
+    -e 'POSIX path of (choose folder with prompt "Choose the folder that holds your numbered audio-content folders (001 …, 002 …):" default location (path to desktop folder))' \
+    2>/dev/null) || { echo "Cancelled."; exit 0; }
+elif [ -t 0 ]; then
+  printf 'Path to your content folder [%s]: ' "$SELF_DIR"
+  read -r reply
+  SRC=${reply:-$SELF_DIR}
+else
+  SRC="$SELF_DIR"
+fi
+SRC="${SRC%/}"                                   # strip trailing slash from the picker
+if [ ! -d "$SRC" ]; then
+  echo "Not a folder: $SRC" >&2
+  gui_alert "$APP_TITLE" "That is not a folder:"$'\n'"$SRC"
+  exit 1
+fi
+echo "Content folder: $SRC"
 
 # Single source of truth for WHAT gets copied: everything in $SRC except the
 # tool's own helper files and macOS junk. Used by BOTH the payload-size
@@ -1421,7 +1450,7 @@ if run_again_prompt; then
   echo
   echo "${cB}Starting another run...${cR}"
   echo
-  exec bash "$SELF_PATH"
+  exec bash "$SELF_PATH" "$SRC"          # pass SRC so the next batch reuses the same folder (no re-picker)
 fi
 
 [ "$n_redo" -eq 0 ] || exit 1

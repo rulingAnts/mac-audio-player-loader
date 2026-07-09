@@ -13,7 +13,7 @@ import pathlib
 import sys
 
 MAPPING = [
-    ("unzipped", "01-folder.png"),
+    ("disk-image window showing the launcher", "01-folder.png"),
     ("hub-setup photo", "01b-hub-setup.jpg"),
     ("Spotlight search", "02-open-terminal.png"),
     ("onto the Terminal window", "03-drag-script.png"),
@@ -33,6 +33,7 @@ MAPPING = [
     ("flagged write-order preview", "14-preview-flagged.png"),
     ("preview page with simple numbers", "15-preview-renamed.png"),
     ("launcher open in Script Editor", "16-script-editor.png"),
+    ("Choose Folder window showing the numbered", "17-choose-folder.png"),
 ]
 
 DATA_RE = re.compile(r'src="data:image/(?:png|jpeg);base64,[^"]*"')

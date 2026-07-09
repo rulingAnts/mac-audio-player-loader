@@ -135,10 +135,10 @@
 
   <div class="callout info">
     📥 <strong>Get the loader:</strong>
-    <a href="https://github.com/rulingAnts/mac-audio-player-loader/releases/latest/download/audio-player-loader-macOS.zip" target="_blank" rel="noopener noreferrer">Download
-    the latest release</a>. It's a tiny <strong>universal Mac</strong> script — it runs on any modern Mac,
-    <strong>Apple Silicon or Intel</strong>, macOS 10.13 (2017) or later, with nothing to install. You add your own numbered audio-content folders
-    next to it (see the <strong>Player-Specific Setup</strong> tab). Source code, issue reports, and updates live in the
+    <a href="https://github.com/rulingAnts/mac-audio-player-loader/releases/latest/download/audio-player-loader-macOS.dmg" target="_blank" rel="noopener noreferrer">Download
+    the latest release</a> (a <code>.dmg</code> disk image). It's a tiny <strong>universal Mac</strong> tool — it runs on any modern Mac,
+    <strong>Apple Silicon or Intel</strong>, macOS 10.13 (2017) or later, with nothing to install. Your audio
+    content stays in its own folder (see the <strong>Player-Specific Setup</strong> tab); the loader asks you to point to it. Source code, issue reports, and updates live in the
     <a href="https://github.com/rulingAnts/mac-audio-player-loader" target="_blank" rel="noopener noreferrer">GitHub repository</a>.
   </div>
 
@@ -155,16 +155,15 @@
   <ol class="steps">
 
     <li>
-      <h3>Put the loader in your content folder</h3>
-      <p>Double-click the downloaded <code>.zip</code> file to unzip it — that gives you the loader
-      <code>load_content.sh</code> and a double-click launcher, <code>Load&nbsp;Audio&nbsp;Players.applescript</code>.
-      Put <strong>both</strong> files <strong>inside your content folder</strong> — the one that holds
-      your numbered audio folders (<code>001&nbsp;…</code>, <code>002&nbsp;…</code>), exactly as shown
-      below. The loader copies whatever sits <strong>in its own folder</strong> onto the devices, so it
-      has to live right beside your audio. (The launcher and the loader are skipped — they never get
-      copied onto a device.)</p>
-      <p>(If someone handed you a ready-made folder, <code>load_content.sh</code> is already inside it
-      — just open that folder.)</p>
+      <h3>Open the loader</h3>
+      <p>Double-click the downloaded <code>.dmg</code> file. A window opens showing the loader — the
+      <code>Load&nbsp;Audio&nbsp;Players.applescript</code> launcher, <code>load_content.sh</code>, and
+      the guides. You can run it straight from this window, or drag the files to a folder on your Mac
+      first if you'd rather keep them handy.</p>
+      <p>Your <strong>audio content</strong> stays in its own folder, wherever you like — the one that
+      holds your numbered sub-folders (<code>001&nbsp;…</code>, <code>002&nbsp;…</code>). It does
+      <strong>not</strong> need to be beside the loader: when you press Run, the loader asks you to
+      point to it (step&nbsp;4).</p>
       <div class="callout info">
         🎯 <strong>Setting up your content folder for a specific player?</strong>
         <label for="rt-players" class="tablink">Open the <strong>Player-Specific Setup</strong> tab (at the top of this page) for your device model</label> — how to
@@ -172,8 +171,8 @@
         needs.
       </div>
       <figure>
-        <img class="shot" src="images/01-folder.png" alt="Screenshot: the unzipped folder with load_content.sh visible">
-        <figcaption>The unzipped folder</figcaption>
+        <img class="shot" src="images/01-folder.png" alt="Screenshot: the loader's disk-image window showing the launcher and load_content.sh">
+        <figcaption>The loader, opened from the disk image</figcaption>
       </figure>
     </li>
 
@@ -204,8 +203,9 @@
         <figcaption>Double-click the launcher, then click <strong>Run</strong> (▶). A Terminal window
         opens and does the work — just answer the questions there.</figcaption>
       </figure>
-      <p>A <strong>Terminal</strong> window opens and the loader starts asking its questions there.
-      From here on you just follow the prompts. (You can close the Script&nbsp;Editor window.)</p>
+      <p>A <strong>Terminal</strong> window opens and the loader starts asking its questions there —
+      the first is <strong>which folder to load</strong> (next step). From here on you just follow the
+      prompts. (You can close the Script&nbsp;Editor window.)</p>
       <div class="callout info">
         ℹ️ <strong>First time only — click Allow.</strong> The first run, macOS asks whether
         <em>Script Editor may control Terminal</em> — click <strong>OK</strong> / <strong>Allow</strong>.
@@ -228,6 +228,18 @@
         Script Editor, right-click it &rarr; <strong>Open With &rarr; Script Editor</strong> — or just
         use the Terminal steps above.)</p>
       </details>
+    </li>
+
+    <li>
+      <h3>Choose your content folder</h3>
+      <p>A <strong>Choose Folder</strong> window opens (starting at your <strong>Desktop</strong>).
+      Navigate to the folder that holds your numbered audio sub-folders (<code>001&nbsp;…</code>,
+      <code>002&nbsp;…</code>), select it, and click <strong>Choose</strong>. That folder — and only
+      what's inside it — is what gets loaded onto the devices.</p>
+      <figure>
+        <img class="shot" src="images/17-choose-folder.png" alt="Screenshot: the Choose Folder window showing the numbered content folders to pick">
+        <figcaption>Pick the folder that holds your <code>001&nbsp;…</code>, <code>002&nbsp;…</code> folders, then <strong>Choose</strong>.</figcaption>
+      </figure>
     </li>
 
     <li>

@@ -64,7 +64,7 @@ Audio Player Loader is that native path. It uses **only what already ships on ev
 
 **Download the ready-to-run bundle** (recommended for operators):
 
-➡️ **[Download the latest macOS release](https://github.com/rulingAnts/mac-audio-player-loader/releases/latest/download/audio-player-loader-macOS.zip)**
+➡️ **[Download the latest macOS release](https://github.com/rulingAnts/mac-audio-player-loader/releases/latest/download/audio-player-loader-macOS.dmg)**
 
 **…or clone the repository:**
 
@@ -102,7 +102,7 @@ My Content Folder/
 ```
 
 - **Put your numbered folders next to `load_content.sh`.** The numbering **is** the play order: files land on the device in sorted name order, and minimal player firmware plays them in that order.
-- **The script copies everything in its own folder except its helper files.** It automatically excludes itself and any `*.app`, `*.zip`, `*.cmd` / `*.CMD`, `*.txt` / `*.TXT`, `*.md`, `*.html`, and an `images/` folder — so the script, its docs, this README, and screenshot folders never get copied onto the devices. macOS junk (`.DS_Store`, `._*`, and similar) is excluded too.
+- **The loader copies everything in the content folder you pick, except helper files.** It automatically excludes any `*.app`, `*.zip`, `*.dmg`, `*.cmd` / `*.CMD`, `*.command`, `*.applescript` / `*.scpt`, `*.txt` / `*.TXT`, `*.md`, `*.html`, and an `images/` folder — so if the loader files happen to sit in that folder too, they're skipped. macOS junk (`.DS_Store`, `._*`, and similar) is excluded too.
 
 ---
 

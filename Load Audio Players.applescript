@@ -7,8 +7,9 @@
 --   A Terminal window opens and does the work — just answer the
 --   questions there. You can close THIS window once it starts.
 --
---   Keep this file in the SAME folder as  load_content.sh
---   and your numbered audio-content folders.
+--   Keep this file in the same folder as  load_content.sh .
+--   When you press Run, the loader asks you to choose your
+--   content folder — so your audio can live anywhere.
 --
 --   (This is just an "ignition key": it launches the real
 --    loader, load_content.sh, in Terminal. Nothing here erases

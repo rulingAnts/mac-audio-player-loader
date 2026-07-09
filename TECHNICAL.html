@@ -202,8 +202,11 @@
     <li><strong>Consent-gated side effects.</strong> Only after confirmation: disable Finder <code>.DS_Store</code>
       writes to USB volumes (the pre-run value is captured first and restored on exit — §9). The
       source folder itself is never modified.</li>
-    <li><strong>Erase (parallel).</strong> Each disk is re-verified (§5), cleanly unmounted (so the
-      partition rewrite cannot fire a spurious “Disk Not Ejected Properly” notification), then
+    <li><strong>Erase (parallel).</strong> At the hand-off from the erase confirmation, Terminal is
+      re-activated once (<code>tell application "Terminal" to activate</code>, GUI only) so the progress
+      bar is visible rather than buried behind the write-order preview or other windows — not looped, so
+      the operator can switch away while it runs. Each disk is then re-verified (§5), cleanly unmounted
+      (so the partition rewrite cannot fire a spurious “Disk Not Ejected Properly” notification), then
       <code>eraseDisk</code>'d, with one retry.</li>
     <li><strong>Prepare &amp; verify.</strong> Mount each freshly erased volume; proceed only if its name is the
       chosen label and it resolves to the expected device node.</li>

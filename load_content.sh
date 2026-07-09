@@ -109,6 +109,17 @@ COMPUTER_NAME=$(scutil --get ComputerName 2>/dev/null || hostname -s 2>/dev/null
 use_gui=0
 [ -z "$SSH_CONNECTION" ] && use_gui=1
 
+# Bring Terminal to the front (GUI only; no-op over SSH). Called at the hand-off
+# from the final confirmation to the erase/copy work, so the live progress bar
+# is not left buried behind the write-order preview (browser) or other windows
+# the operator opened. Deliberately NOT looped — it reclaims focus once, at the
+# interaction; once the work is running the operator is free to switch to other
+# apps and let it finish in the background.
+focus_terminal() {
+  [ "$use_gui" -eq 1 ] || return 0
+  osascript -e 'tell application "Terminal" to activate' >/dev/null 2>&1 || true
+}
+
 # --- Colors: only when stdout is a real terminal, and honor NO_COLOR ---
 # (kept OUT of the status files themselves, so parsing stays clean)
 if [ -t 1 ] && [ -z "$NO_COLOR" ]; then
@@ -973,6 +984,11 @@ else
   read -p "Erase ALL ${#devices[@]} disks and copy the content onto each? (y/N): " confirm
   [[ $confirm =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
 fi
+
+# The operator just confirmed the erase. If they opened the write-order preview,
+# the browser may be sitting on top — pull Terminal back to the front now so the
+# erase/copy progress is visible instead of happening on a buried window.
+focus_terminal
 
 # --- Consent given -----------------------------------------------------
 # Suppress Finder's .DS_Store-on-USB behaviour for the duration of the run so a

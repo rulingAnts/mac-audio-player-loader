@@ -88,9 +88,11 @@
   a fresh full-size FAT32 partition, and copies a folder of audio content onto every device in
   parallel. It is operated by non-technical field users through native macOS dialogs; the terminal
   output is the authoritative record.</p>
-  <p>The script lives <em>inside</em> the content folder and copies that folder's contents (minus its
-  own helper files) to each device — the same convention as Hope Tech Global's <code>HTGv4.CMD</code>
-  on Windows.</p>
+  <p>The loader does not need to live in the content folder: at start-up it asks the operator to
+  choose the content folder (a native <code>choose folder</code> dialog, defaulting to the Desktop),
+  then copies that folder's contents (minus any helper files) to each device. Keeping the loader
+  beside the content still works &mdash; just pick that folder. This fills the same role as Hope Tech
+  Global's <code>HTGv4.CMD</code> on Windows.</p>
 
   <h2 id="env">2. Environment &amp; dependencies</h2>
   <ul>
@@ -143,6 +145,11 @@
       the read-only DMG &mdash; a benign Script&nbsp;Editor "file is locked" notice the operator simply
       cancels (running, not editing, needs no unlock). Both launcher and loader are excluded from the
       device payload.</li>
+    <li><strong>Choose source folder.</strong> The first operator prompt: a native
+      <code>choose folder</code> dialog (osascript, defaulting to the Desktop) asks which folder holds
+      the content; the loader copies that folder's contents. A folder path may instead be passed as the
+      first argument &mdash; how the run-again restart reuses the same folder without re-prompting &mdash;
+      and text/SSH mode accepts a typed path.</li>
     <li><strong>Volume label prompt.</strong> Asks for the FAT label (default <code>PLAYER</code>); input
       is sanitized to <code>[A-Za-z0-9]</code>, uppercased, truncated to 11 chars. <code>REDO</code> is reserved.</li>
     <li><strong>Name mode.</strong> Optional per-run choice: keep original names, or rename every

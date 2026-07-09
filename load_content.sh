@@ -268,6 +268,48 @@ run_again_prompt() {
 # running it before STATUS_DIR exists or before we change the setting is a no-op.
 trap cleanup EXIT
 
+# --- Resolve our own real path (so a symlink to the script can't make ---
+# --- SRC point at the wrong folder) ----------------------------------
+SELF_PATH=$0
+while [ -L "$SELF_PATH" ]; do
+  link=$(readlink "$SELF_PATH") || break
+  case "$link" in
+    /*) SELF_PATH=$link ;;
+    *)  SELF_PATH="$(dirname "$SELF_PATH")/$link" ;;
+  esac
+done
+SELF="$(basename "$SELF_PATH")"
+SELF_DIR="$(cd "$(dirname "$SELF_PATH")" && pwd)"
+
+# --- Where is the audio content? -----------------------------------------
+# The loader does NOT have to live in the content folder. Source order:
+#   1. a folder path passed as the first argument — used by the run-again
+#      restart to keep the SAME folder, and available to power users;
+#   2. GUI: a native "Choose folder" dialog, opening at the Desktop; the
+#      operator navigates to wherever the content lives (beside the loader,
+#      or anywhere else);
+#   3. text / SSH: a typed path (Return alone = the loader's own folder).
+if [ -n "${1:-}" ] && [ -d "$1" ]; then
+  SRC="$1"
+elif [ "$use_gui" -eq 1 ]; then
+  SRC=$(osascript \
+    -e 'POSIX path of (choose folder with prompt "Choose the folder that holds your numbered audio-content folders (001 …, 002 …):" default location (path to desktop folder))' \
+    2>/dev/null) || { echo "Cancelled."; exit 0; }
+elif [ -t 0 ]; then
+  printf 'Path to your content folder [%s]: ' "$SELF_DIR"
+  read -r reply
+  SRC=${reply:-$SELF_DIR}
+else
+  SRC="$SELF_DIR"
+fi
+SRC="${SRC%/}"                                   # strip trailing slash from the picker
+if [ ! -d "$SRC" ]; then
+  echo "Not a folder: $SRC" >&2
+  gui_alert "$APP_TITLE" "That is not a folder:"$'\n'"$SRC"
+  exit 1
+fi
+echo "Content folder: $SRC"
+
 # --- Ask for the volume label (osascript dialog, CLI fallback) ---------
 # The label is the FAT volume name written to every device. Prompting each run
 # lets the operator use a NEW label per batch, which is what makes the
@@ -384,49 +426,6 @@ case "$PLAYER_PROFILE" in
   "Generic MP3 player")            P_FORMATS="mp3";                          P_DEPTHS="";        P_DIRNUM="";        P_MAXNAME=0 ;;
   *)                               P_FORMATS="mp3 wav wma";                  P_DEPTHS="";        P_DIRNUM="";        P_MAXNAME=64 ;;
 esac
-
-
-# --- Resolve our own real path (so a symlink to the script can't make ---
-# --- SRC point at the wrong folder) ----------------------------------
-SELF_PATH=$0
-while [ -L "$SELF_PATH" ]; do
-  link=$(readlink "$SELF_PATH") || break
-  case "$link" in
-    /*) SELF_PATH=$link ;;
-    *)  SELF_PATH="$(dirname "$SELF_PATH")/$link" ;;
-  esac
-done
-SELF="$(basename "$SELF_PATH")"
-SELF_DIR="$(cd "$(dirname "$SELF_PATH")" && pwd)"
-
-# --- Where is the audio content? -----------------------------------------
-# The loader does NOT have to live in the content folder. Source order:
-#   1. a folder path passed as the first argument — used by the run-again
-#      restart to keep the SAME folder, and available to power users;
-#   2. GUI: a native "Choose folder" dialog. It opens at the loader's own
-#      folder, so keeping the content beside the loader still works (just
-#      pick that folder); otherwise navigate to wherever the content lives;
-#   3. text / SSH: a typed path (Return alone = the loader's own folder).
-if [ -n "${1:-}" ] && [ -d "$1" ]; then
-  SRC="$1"
-elif [ "$use_gui" -eq 1 ]; then
-  SRC=$(osascript \
-    -e 'POSIX path of (choose folder with prompt "Choose the folder that holds your numbered audio-content folders (001 …, 002 …):" default location (path to desktop folder))' \
-    2>/dev/null) || { echo "Cancelled."; exit 0; }
-elif [ -t 0 ]; then
-  printf 'Path to your content folder [%s]: ' "$SELF_DIR"
-  read -r reply
-  SRC=${reply:-$SELF_DIR}
-else
-  SRC="$SELF_DIR"
-fi
-SRC="${SRC%/}"                                   # strip trailing slash from the picker
-if [ ! -d "$SRC" ]; then
-  echo "Not a folder: $SRC" >&2
-  gui_alert "$APP_TITLE" "That is not a folder:"$'\n'"$SRC"
-  exit 1
-fi
-echo "Content folder: $SRC"
 
 # Single source of truth for WHAT gets copied: everything in $SRC except the
 # tool's own helper files and macOS junk. Used by BOTH the payload-size

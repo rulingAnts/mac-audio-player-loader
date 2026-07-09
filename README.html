@@ -566,16 +566,16 @@
 
   <div class="callout warn">
     <strong>Advanced (not generally recommended): loading from a device instead of a folder on your Mac.</strong>
-    You can run the loader straight from a “master” device — a player, a thumb drive, etc. — by putting
-    <code>load_content.sh</code> and your content folders on it and dragging <em>that</em> copy onto Terminal.
-    If you do:
+    You can keep your content on a “master” device — a player, a thumb drive, etc. — and, when the
+    loader asks which folder to load, pick the content folder <em>on that device</em>. (The loader itself
+    can sit anywhere.) If you do:
     <ul>
       <li><strong>Plug the master into its own port on the Mac</strong> — a spare USB / USB-C port on the
         computer itself, <strong>not</strong> a spare socket on the same hub or adapter as the devices you're
         loading. That keeps it out of the shared-hub traffic (so the copy stays fast) and keeps its identity
         stable while devices are plugged and unplugged on the hub.</li>
       <li><strong>The loader protects the master automatically.</strong> It works out which physical disk the
-        script is running from and removes that disk from everything it can erase — you'll see
+        content folder you chose sits on and removes that disk from everything it can erase — you'll see
         <code>Skipping diskN — it holds the source content</code> — and it only ever <em>reads</em> from the
         master, never formatting, writing to, or renaming it.</li>
       <li><strong>Still play it safe:</strong> the master is protected from erasure but is not hardware

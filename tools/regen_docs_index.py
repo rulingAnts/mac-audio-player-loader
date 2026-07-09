@@ -34,6 +34,7 @@ MAPPING = [
     ("preview page with simple numbers", "15-preview-renamed.png"),
     ("launcher open in Script Editor", "16-script-editor.png"),
     ("Choose Folder window showing the numbered", "17-choose-folder.png"),
+    ("is locked", "18-locked-warning.png"),
 ]
 
 DATA_RE = re.compile(r'src="data:image/(?:png|jpeg);base64,[^"]*"')

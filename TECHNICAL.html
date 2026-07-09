@@ -138,9 +138,11 @@
       <code>tell&nbsp;application&nbsp;"Terminal"&nbsp;to&nbsp;do&nbsp;script&nbsp;"/bin/bash&nbsp;&lt;loader&gt;"</code> —
       so the whole run happens in a real Terminal/TTY (live progress bar, colours, prompts, signal traps),
       identical to the manual <em>drag-onto-Terminal</em> path which remains the fallback. The wrapper is a
-      script <em>document</em>, not an app bundle, so a downloaded copy is not Gatekeeper-blocked; the only
-      first-run prompt is the one-time "control Terminal" automation consent. Both launcher and loader are
-      excluded from the device payload.</li>
+      script <em>document</em>, not an app bundle, so a downloaded copy is not Gatekeeper-blocked. The
+      first-run prompts are the one-time "control Terminal" automation consent and &mdash; when run from
+      the read-only DMG &mdash; a benign Script&nbsp;Editor "file is locked" notice the operator simply
+      cancels (running, not editing, needs no unlock). Both launcher and loader are excluded from the
+      device payload.</li>
     <li><strong>Volume label prompt.</strong> Asks for the FAT label (default <code>PLAYER</code>); input
       is sanitized to <code>[A-Za-z0-9]</code>, uppercased, truncated to 11 chars. <code>REDO</code> is reserved.</li>
     <li><strong>Name mode.</strong> Optional per-run choice: keep original names, or rename every

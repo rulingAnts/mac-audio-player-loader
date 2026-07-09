@@ -29,12 +29,16 @@ end if
 
 -- Open Terminal and run the loader there. `do script` starts it in a fresh
 -- Terminal window with a live view of everything (progress bar, prompts,
--- colours) — exactly as if you had typed it yourself. `activate` comes AFTER
--- `do script` so that new window is brought to the FRONT (activating first
--- would let Script Editor take focus back). Script Editor is left open — you
--- can just close its window. The first time, macOS asks whether Script Editor
--- may control Terminal: click Allow.
+-- colours) — exactly as if you had typed it yourself.
+--   • `exec` replaces the window's shell with the loader, so when the loader
+--     finishes there is NO leftover shell process — the window shows
+--     "[Process completed]" and quitting Terminal (Cmd-Q) never pops the
+--     "terminate the running process?" warning.
+--   • `activate` comes AFTER `do script` so the new window is brought to the
+--     FRONT (activating first would let Script Editor take focus back).
+-- Script Editor is left open — just close it (Cmd-Q) when you're done. The
+-- first time, macOS asks whether Script Editor may control Terminal: Allow.
 tell application "Terminal"
-	do script "clear; /bin/bash " & quoted form of loaderPath
+	do script "clear; exec /bin/bash " & quoted form of loaderPath
 	activate
 end tell

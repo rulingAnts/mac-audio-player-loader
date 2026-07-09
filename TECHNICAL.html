@@ -144,7 +144,9 @@
       first-run prompts are the one-time "control Terminal" automation consent and &mdash; when run from
       the read-only DMG &mdash; a benign Script&nbsp;Editor "file is locked" notice the operator simply
       cancels (running, not editing, needs no unlock). Both launcher and loader are excluded from the
-      device payload.</li>
+      device payload. The window runs the loader via <code>exec</code>, so on completion no shell process
+      lingers (the window reads <code>[Process completed]</code>) and quitting Terminal never triggers the
+      &ldquo;terminate the running process?&rdquo; prompt.</li>
     <li><strong>Choose source folder.</strong> The first operator prompt: a native
       <code>choose folder</code> dialog (osascript, defaulting to the Desktop) asks which folder holds
       the content; the loader copies that folder's contents. A folder path may instead be passed as the

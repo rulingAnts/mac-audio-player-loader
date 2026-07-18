@@ -28,7 +28,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build the disk image
         run: bash tools/build_dmg.sh
@@ -38,7 +38,7 @@ jobs:
       # (workflow_dispatch) run stops here and never creates or edits a release.
       - name: Upload the .dmg as a workflow artifact
         id: artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: audio-player-loader-macOS-dmg
           path: dist/audio-player-loader-macOS.dmg

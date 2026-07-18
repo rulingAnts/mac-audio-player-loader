@@ -16,14 +16,22 @@
 --    anything — the loader asks you before touching any device.)
 -- ============================================================
 
--- Find this file's own folder, then the loader that sits beside it.
+-- Find this file's own folder, then the loader. In the download (.dmg) the
+-- loader lives in a hidden ".loader" sub-folder, so the window shows only THIS
+-- launcher and non-technical users can't pick the wrong file. When the repo is
+-- cloned it sits right beside us instead — so check both, preferring whichever
+-- exists (beside first, for developers; then the hidden folder, for the .dmg).
 set myPosix to POSIX path of (path to me)
 set myFolder to do shell script "dirname " & quoted form of myPosix
-set loaderPath to myFolder & "/load_content.sh"
+set besidePath to myFolder & "/load_content.sh"
+set hiddenPath to myFolder & "/.loader/load_content.sh"
 
--- Safety: refuse to run if the loader isn't next to us (someone moved this file).
-if (do shell script "[ -f " & quoted form of loaderPath & " ] && echo yes || echo no") is "no" then
-	display alert "Can't find load_content.sh" message "This launcher has to stay in the SAME folder as load_content.sh (the file that does the loading). Put them back in the same folder and press Run again." as critical
+if (do shell script "[ -f " & quoted form of besidePath & " ] && echo yes || echo no") is "yes" then
+	set loaderPath to besidePath
+else if (do shell script "[ -f " & quoted form of hiddenPath & " ] && echo yes || echo no") is "yes" then
+	set loaderPath to hiddenPath
+else
+	display alert "Can't find load_content.sh" message "This launcher needs load_content.sh — either right beside it, or in a hidden \".loader\" folder next to it (as it ships in the download). Keep this launcher together with its folder and press Run again." as critical
 	return
 end if
 

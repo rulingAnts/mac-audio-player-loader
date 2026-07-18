@@ -251,6 +251,8 @@ run_again_prompt() {
     # Content copied, but CHECK devices need a human look (e.g. could-not-eject
     # leaves a device still MOUNTED) — do NOT tell the operator "unplug them all".
     m="$n_good device(s) loaded; $n_check need a look BEFORE unplugging (see the Terminal — e.g. one could not eject and is still mounted)."$'\n\n'"When you've sorted those, connect the next batch if you like, then click \"Run again\" — or \"Done\"."
+  elif [ "${FIRMWARE_MODE:-0}" -eq 1 ]; then
+    m="All $n_good device(s) received the firmware file."$'\n\n'"Now DISCONNECT them, turn each ON and leave it until it STOPS BEEPING (that installs the firmware), then reconnect them all and run the loader NORMALLY to reload your audio content."$'\n\n'"Click \"Done\" — or \"Run again\" to flash more devices with the same firmware file."
   else
     m="All $n_good device(s) loaded successfully."$'\n\n'"You may unplug them now (test them for correct content later). Connect the next batch of new devices, then click \"Run again\" — or \"Done\"."
   fi
@@ -292,6 +294,41 @@ done
 SELF="$(basename "$SELF_PATH")"
 SELF_DIR="$(cd "$(dirname "$SELF_PATH")" && pwd)"
 
+# --- Command-line options ------------------------------------------------
+# --firmware / --update-firmware: FIRMWARE-UPDATE mode (TERMINAL ONLY — the
+# double-click ignition key never passes a flag, so ordinary operators can't
+# reach it by accident). Instead of an audio-content folder, the loader writes
+# ONE firmware file (a .ufw file, or whatever the maker ships) to the root of
+# each freshly-erased device. Everything else is the same: whole-disk erase,
+# volume label, ordered copy (of the single file), eject. A firmware update
+# RE-LOADS the device, so afterwards the operator is told to reflash each one,
+# then reload content. See TECHNICAL.html.
+FIRMWARE_MODE=0
+POS_ARG=""            # optional path argument (content folder, or firmware file)
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --firmware|--update-firmware|--fw) FIRMWARE_MODE=1 ;;
+    -h|--help)
+      cat <<USAGE
+$APP_TITLE
+Usage: $SELF [--firmware] [PATH]
+
+  (no options)   Load audio content onto every selected device. PATH, if given,
+                 is the content folder; otherwise you are asked to choose one.
+  --firmware     FIRMWARE-UPDATE mode: write a SINGLE firmware file (usually a
+                 .ufw file, but any file is accepted) to each device. PATH, if
+                 given, is that firmware file. Terminal-only — the double-click
+                 launcher never uses this.
+  -h, --help     Show this help and exit.
+USAGE
+      exit 0 ;;
+    --) shift; [ $# -gt 0 ] && POS_ARG="$1"; break ;;
+    -*) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
+    *)  POS_ARG="$1" ;;
+  esac
+  shift
+done
+
 # --- Where is the audio content? -----------------------------------------
 # The loader does NOT have to live in the content folder. Source order:
 #   1. a folder path passed as the first argument — used by the run-again
@@ -300,26 +337,60 @@ SELF_DIR="$(cd "$(dirname "$SELF_PATH")" && pwd)"
 #      operator navigates to wherever the content lives (beside the loader,
 #      or anywhere else);
 #   3. text / SSH: a typed path (Return alone = the loader's own folder).
-if [ -n "${1:-}" ] && [ -d "$1" ]; then
-  SRC="$1"
-elif [ "$use_gui" -eq 1 ]; then
-  SRC=$(osascript \
-    -e 'POSIX path of (choose folder with prompt "Choose the folder that holds your numbered audio-content folders (001 …, 002 …):" default location (path to desktop folder))' \
-    2>/dev/null) || { echo "Cancelled."; exit 0; }
-elif [ -t 0 ]; then
-  printf 'Path to your content folder [%s]: ' "$SELF_DIR"
-  read -r reply
-  SRC=${reply:-$SELF_DIR}
+if [ "$FIRMWARE_MODE" -eq 1 ]; then
+  # FIRMWARE mode: the source is a single firmware FILE, not a folder. Default
+  # is a .ufw file, but any file is accepted (a maker may ship another extension).
+  # Source order mirrors content mode: a path argument (used by the run-again
+  # restart), then a GUI file picker, then a typed path.
+  if [ -n "$POS_ARG" ] && [ -f "$POS_ARG" ]; then
+    FW_FILE="$POS_ARG"
+  elif [ "$use_gui" -eq 1 ]; then
+    FW_FILE=$(osascript \
+      -e 'POSIX path of (choose file with prompt "Choose the firmware file to write to each device (usually a single .ufw file):" default location (path to desktop folder))' \
+      2>/dev/null) || { echo "Cancelled."; exit 0; }
+  elif [ -t 0 ]; then
+    printf 'Path to the firmware file: '
+    read -r reply
+    FW_FILE="$reply"
+  else
+    echo "Firmware mode needs a firmware-file path (no GUI and no terminal input)." >&2
+    exit 1
+  fi
+  FW_FILE="${FW_FILE%/}"
+  if [ ! -f "$FW_FILE" ]; then
+    echo "Not a file: $FW_FILE" >&2
+    gui_alert "$APP_TITLE" "That is not a file:"$'\n'"$FW_FILE"
+    exit 1
+  fi
+  # Split into the directory the copy loop reads from (SRC) and the bare file
+  # name the manifest carries (FW_NAME); absolutize so both are stable.
+  FW_DIR="$(cd "$(dirname "$FW_FILE")" && pwd)"
+  FW_NAME="$(basename "$FW_FILE")"
+  FW_FILE="$FW_DIR/$FW_NAME"
+  SRC="$FW_DIR"
+  echo "Firmware file: $FW_FILE"
 else
-  SRC="$SELF_DIR"
+  if [ -n "$POS_ARG" ] && [ -d "$POS_ARG" ]; then
+    SRC="$POS_ARG"
+  elif [ "$use_gui" -eq 1 ]; then
+    SRC=$(osascript \
+      -e 'POSIX path of (choose folder with prompt "Choose the folder that holds your numbered audio-content folders (001 …, 002 …):" default location (path to desktop folder))' \
+      2>/dev/null) || { echo "Cancelled."; exit 0; }
+  elif [ -t 0 ]; then
+    printf 'Path to your content folder [%s]: ' "$SELF_DIR"
+    read -r reply
+    SRC=${reply:-$SELF_DIR}
+  else
+    SRC="$SELF_DIR"
+  fi
+  SRC="${SRC%/}"                                   # strip trailing slash from the picker
+  if [ ! -d "$SRC" ]; then
+    echo "Not a folder: $SRC" >&2
+    gui_alert "$APP_TITLE" "That is not a folder:"$'\n'"$SRC"
+    exit 1
+  fi
+  echo "Content folder: $SRC"
 fi
-SRC="${SRC%/}"                                   # strip trailing slash from the picker
-if [ ! -d "$SRC" ]; then
-  echo "Not a folder: $SRC" >&2
-  gui_alert "$APP_TITLE" "That is not a folder:"$'\n'"$SRC"
-  exit 1
-fi
-echo "Content folder: $SRC"
 
 # --- Ask for the volume label (osascript dialog, CLI fallback) ---------
 # The label is the FAT volume name written to every device. Prompting each run
@@ -350,6 +421,9 @@ fi
 # is never touched. Play order is unchanged: numbering follows the same
 # name-sort the copy already uses.
 SIMPLE_NAMES=0
+# Simple-numbers renaming is a CONTENT-mode option only — a firmware update
+# writes a single file, so there is nothing to renumber. Skip the prompt.
+if [ "$FIRMWARE_MODE" -ne 1 ]; then
 if [ "$use_gui" -eq 1 ]; then
   btn=$(osascript -e 'on run {t}' \
     -e 'button returned of (display dialog "Names on the devices:" & return & return & "KEEP NAMES — copy your folder and file names as they are." & return & return & "SIMPLE NUMBERS — rename every folder and audio file to 001, 002, … in play order (files keep their extension; numbering restarts inside each folder). Safest for picky players. Your source folder is never renamed." buttons {"Simple numbers", "Keep names"} default button "Keep names" with title t)' \
@@ -361,8 +435,15 @@ elif [ -t 0 ]; then
   case "$ans" in [Yy]*) SIMPLE_NAMES=1 ;; esac
 fi
 [ "$SIMPLE_NAMES" -eq 1 ] && echo "Names on devices: SIMPLE NUMBERS (folders and files -> 001, 002, ...)" || echo "Names on devices: kept as-is"
+fi
 
 # --- Which player is this content for? ----------------------------------
+# In FIRMWARE mode there is no audio content to validate, so the player picker
+# and every player-specific content rule below are skipped.
+if [ "$FIRMWARE_MODE" -eq 1 ]; then
+  PLAYER_PROFILE="Firmware update"
+  echo "Mode: FIRMWARE UPDATE (a single firmware file is written to each device)"
+else
 # The loader is player-agnostic, but the CONTENT CHECK below is far more
 # useful when it knows the target player's documented rules (sourced from the
 # per-player research in the operator guide's Player-Specific Setup tab).
@@ -437,6 +518,7 @@ case "$PLAYER_PROFILE" in
   "Generic MP3 player")            P_FORMATS="mp3";                          P_DEPTHS="";        P_DIRNUM="";        P_MAXNAME=0 ;;
   *)                               P_FORMATS="mp3 wav wma";                  P_DEPTHS="";        P_DIRNUM="";        P_MAXNAME=64 ;;
 esac
+fi
 
 # Single source of truth for WHAT gets copied: everything in $SRC except the
 # tool's own helper files and macOS junk. Used by BOTH the payload-size
@@ -664,7 +746,13 @@ build_manifest() {
          fi
        done; }
 }
-build_manifest > "$MANIFEST"
+if [ "$FIRMWARE_MODE" -eq 1 ]; then
+  # One firmware file at the volume root — no folders, no renaming. The copy
+  # loop reads src -> dest from this same manifest, so this is all it needs.
+  printf 'F\0%s\0%s\0' "$FW_NAME" "$FW_NAME" > "$MANIFEST"
+else
+  build_manifest > "$MANIFEST"
+fi
 
 # ===== CONTENT CHECK (profile-aware, warnings only) =====================
 # Validates the payload against the SELECTED PLAYER's documented rules before
@@ -674,6 +762,8 @@ build_manifest > "$MANIFEST"
 # write-order preview marks each flagged item exactly where it sits. Warnings
 # never block (specs vary, firmware revisions differ) — the operator reads
 # them and picks Load anyway / Cancel.
+# In FIRMWARE mode there is nothing to validate — set empty results and skip.
+if [ "$FIRMWARE_MODE" -ne 1 ]; then
 PROBLEMS="$STATUS_DIR/problems"   # itemized:  src-rel-path NUL short-reason NUL …
 : > "$PROBLEMS"
 warn=""       # capped version for the dialog
@@ -763,6 +853,9 @@ empty_dirs=$(tr '\0' '\n' < "$MANIFEST" | awk '
   END { for (d in dirs) if (!(d in ne)) print d }' | LC_ALL=C sort)
 add_warn "These folders are EMPTY (no audio anywhere inside) — they waste a slot on the player and play nothing:" "$empty_dirs" \
   "empty folder — nothing inside will play"
+else
+  PROBLEMS="$STATUS_DIR/problems"; : > "$PROBLEMS"; warn=""; warnfull=""
+fi
 
 # Load the itemized problems once; both preview flavors mark items from these.
 # prob_anc collects every parent folder of a flagged item, so the whole path
@@ -915,7 +1008,11 @@ write_preview > "$PREVIEW_HTML"
 # Report the content check: full itemized list in the Terminal; in GUI mode
 # the marked-up preview opens AUTOMATICALLY so the operator sees exactly where
 # each problem sits, then the caution dialog offers Load anyway / Cancel.
-if [ -n "$warn" ]; then
+if [ "$FIRMWARE_MODE" -eq 1 ]; then
+  echo
+  echo "${cB}FIRMWARE MODE${cR} — one firmware file will be written to each selected device:"
+  echo "    $FW_NAME"
+elif [ -n "$warn" ]; then
   echo
   echo "${cYEL}${cB}CONTENT CHECK ($PLAYER_PROFILE) — may not play as intended:${cR}"
   printf '%s' "$warnfull"
@@ -940,10 +1037,14 @@ fi
 # it and its "Preview order…" button re-opens the same page on demand, so
 # nothing extra interrupts operators loading batch after batch of the same
 # content.
+if [ "$FIRMWARE_MODE" -eq 1 ]; then
+  ORDER_NOTE="Firmware update: the single file $FW_NAME will be written to the root of each device."
+else
 echo
 echo "${cB}Files are written in FILENAME ORDER${cR} -- add 001, 002, ... number prefixes to change the play order."
 ORDER_NOTE="Files are written in FILENAME ORDER — add number prefixes (001, 002, 003) to set the play order. \"Preview order…\" shows exactly what will be written."
 [ "$SIMPLE_NAMES" -eq 1 ] && ORDER_NOTE="$ORDER_NOTE Simple numbers is ON: every folder and file is written as 001, 002, ... (same order)."
+fi
 # ===== end write manifest + content check + preview ====================
 
 if [ "$use_gui" -eq 1 ] && picked=$(gui_pick "$PREVIEW_HTML" "$ORDER_NOTE" "${labels[@]}" 2>/dev/null); then
@@ -1015,9 +1116,13 @@ defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
 # AppleDouble sidecars, synthesized on FAT) is scrubbed off each device, not here.
 
 # --- Payload size, measured over the exact set the copy loop will write --
-payload_b=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \
-  -type f "${PAYLOAD_SKIP[@]}" -print0 |
-  xargs -0 stat -f %z 2>/dev/null | awk '{s += $1} END {printf "%d", s}')
+if [ "$FIRMWARE_MODE" -eq 1 ]; then
+  payload_b=$(stat -f %z "$FW_FILE" 2>/dev/null || echo 0)
+else
+  payload_b=$(cd "$SRC" && find . -mindepth 1 "${PAYLOAD_PRUNE[@]}" -o \
+    -type f "${PAYLOAD_SKIP[@]}" -print0 |
+    xargs -0 stat -f %z 2>/dev/null | awk '{s += $1} END {printf "%d", s}')
+fi
 total_k=$(((payload_b + 1023) / 1024))
 [ "$total_k" -gt 0 ] || total_k=1
 
@@ -1426,22 +1531,37 @@ elif [ "$n_check" -eq 0 ]; then
 fi
 echo "${cDIM}=========================================${cR}"
 
-# --- Verify (ALWAYS shown — some failures cannot be auto-detected) ------
-echo
-echo "${cB}IMPORTANT — check your devices before handing them out${cR}"
-echo "This tool cannot catch every failure. A device that fully disconnected"
-echo "or lost power partway through can still be reported as loaded, and blank"
-echo "or half-written devices are not always obvious."
-echo "To be sure, TEST them:"
-vstep=1
-if [ "$n_redo" -gt 0 ]; then
-  echo "  $vstep. Pull the failed (${REDO_LABEL}) devices first (identified above)."; vstep=$((vstep + 1))
+# --- Verify / next steps (ALWAYS shown) --------------------------------
+if [ "$FIRMWARE_MODE" -eq 1 ]; then
+  echo
+  echo "${cB}FIRMWARE COPIED — now flash the devices, then reload content${cR}"
+  echo "Each loaded device now holds the firmware file. To install it and get the"
+  echo "devices ready for use again:"
+  echo "  1. DISCONNECT all the devices from the hub / Mac."
+  echo "  2. Turn each device ON and leave it running until it STOPS BEEPING."
+  echo "     The beeping is the firmware installing itself — wait for silence on"
+  echo "     EVERY device before doing anything else."
+  echo "  3. Once they have all gone quiet, the firmware is installed — but the"
+  echo "     update wiped each device, so it now holds NO audio content."
+  echo "  4. Plug them all back in and run the loader again NORMALLY (without"
+  echo "     --firmware) to reload them with your audio content."
+else
+  echo
+  echo "${cB}IMPORTANT — check your devices before handing them out${cR}"
+  echo "This tool cannot catch every failure. A device that fully disconnected"
+  echo "or lost power partway through can still be reported as loaded, and blank"
+  echo "or half-written devices are not always obvious."
+  echo "To be sure, TEST them:"
+  vstep=1
+  if [ "$n_redo" -gt 0 ]; then
+    echo "  $vstep. Pull the failed (${REDO_LABEL}) devices first (identified above)."; vstep=$((vstep + 1))
+  fi
+  echo "  $vstep. Unplug and re-plug the rest — or re-plug the whole hub — and confirm"
+  echo "     each one comes back mounted with the label \"${LABEL}\"."; vstep=$((vstep + 1))
+  echo "  $vstep. Check one device at a time — and spot-play a track in a real player."
+  echo "  ${cDIM}Tip: use a NEW, unused label for each batch. Then any device that"
+  echo "  quietly kept its OLD content (never really written) is easy to spot.${cR}"
 fi
-echo "  $vstep. Unplug and re-plug the rest — or re-plug the whole hub — and confirm"
-echo "     each one comes back mounted with the label \"${LABEL}\"."; vstep=$((vstep + 1))
-echo "  $vstep. Check one device at a time — and spot-play a track in a real player."
-echo "  ${cDIM}Tip: use a NEW, unused label for each batch. Then any device that"
-echo "  quietly kept its OLD content (never really written) is easy to spot.${cR}"
 echo
 echo "Finished in $((SECONDS / 60))m $((SECONDS % 60))s."
 
@@ -1465,7 +1585,11 @@ if run_again_prompt; then
   echo
   echo "${cB}Starting another run...${cR}"
   echo
-  exec bash "$SELF_PATH" "$SRC"          # pass SRC so the next batch reuses the same folder (no re-picker)
+  if [ "$FIRMWARE_MODE" -eq 1 ]; then
+    exec bash "$SELF_PATH" --firmware "$FW_FILE"   # reuse the same firmware file
+  else
+    exec bash "$SELF_PATH" "$SRC"        # pass SRC so the next batch reuses the same folder (no re-picker)
+  fi
 fi
 
 [ "$n_redo" -eq 0 ] || exit 1

@@ -66,6 +66,8 @@ Audio Player Loader is that native path. It uses **only what already ships on ev
 
 ➡️ **[Download the latest macOS release](https://github.com/rulingAnts/mac-audio-player-loader/releases/latest/download/audio-player-loader-macOS.dmg)**
 
+Inside the disk image you see just the **`Load Audio Players.applescript`** launcher and the guides — double-click the launcher and you're going; it drives everything from there. The actual loader, `load_content.sh`, is tucked into a hidden **`.loader/`** folder beside the launcher so a non-technical operator can't double-click the wrong file. Advanced users who want [firmware-update mode](#firmware-updates-advanced) open it from there.
+
 **…or clone the repository:**
 
 ```sh
@@ -151,6 +153,28 @@ The safety guards that make it trustworthy to run:
 - **Restores the one host setting it toggles.** It temporarily disables Finder's `.DS_Store`-on-USB writing during the run and puts the original value back on exit — your Mac is left exactly as it was found.
 
 This is a condensed summary. For the complete guard-by-guard table, the reasoning behind each guard, and the auditing notes, read the **[full technical specification →](https://rulingants.github.io/mac-audio-player-loader/TECHNICAL.html)** (also in this repo as [`TECHNICAL.html`](TECHNICAL.html)).
+
+---
+
+## Firmware updates (advanced)
+
+Some players — the **KULUMI Mini**, for example — take a firmware update by copying a **single firmware file** (typically a `.ufw` file) onto the root of an otherwise-empty device, then powering the device on so it self-installs. The loader can prepare a whole hub of devices for this in one pass: it reuses the exact same erase → label → ordered-copy → eject machinery as a normal content load, but writes just that one file instead of a folder tree.
+
+Because it wipes and re-images every selected device, firmware mode is **terminal-only** — the double-click launcher never triggers it, which keeps ordinary operators from reaching it by accident. Run the loader from Terminal with the `--firmware` flag:
+
+```sh
+bash load_content.sh --firmware
+```
+
+You are asked to pick the **single firmware file** (the picker shows all files by default, so a maker's non-`.ufw` file works too), then a volume label and the disks to erase — exactly like a normal run, including the two-step erase confirmation. Each selected device is erased and gets that one file written to its root, in parallel.
+
+When the copy finishes, the loader tells you to:
+
+1. **Disconnect** all the devices.
+2. Turn each one **on and leave it until it stops beeping** — that beeping is the firmware installing itself; wait for silence on *every* device.
+3. Plug them all back in and **run the loader normally** (without `--firmware`) to reload them with your audio content — a firmware update wipes the device, so every device must be reloaded afterward.
+
+If the disk image is your starting point, the loader lives in the hidden `.loader/` folder, so run `bash /Volumes/<image-name>/.loader/load_content.sh --firmware` (or type `bash `, then drag that file onto the Terminal window). `bash load_content.sh --help` lists every option.
 
 ---
 

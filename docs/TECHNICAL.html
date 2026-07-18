@@ -136,7 +136,9 @@
     <li><strong>Launch.</strong> Two entry points, same engine. Primary: a tiny sidecar AppleScript
       (<code>Load&nbsp;Audio&nbsp;Players.applescript</code>) that the operator double-clicks and Runs in
       Script&nbsp;Editor; it resolves its own folder via <code>path to me</code>, verifies
-      <code>load_content.sh</code> sits beside it, and issues
+      <code>load_content.sh</code> is present — beside it, or (in the download disk image) in a hidden
+      <code>.loader/</code> sub-folder next to it, so the DMG window shows only the launcher and a
+      non-technical operator cannot pick the wrong file — and issues
       <code>tell&nbsp;application&nbsp;"Terminal"&nbsp;to&nbsp;do&nbsp;script&nbsp;"/bin/bash&nbsp;&lt;loader&gt;"</code> —
       so the whole run happens in a real Terminal/TTY (live progress bar, colours, prompts, signal traps),
       identical to the manual <em>drag-onto-Terminal</em> path which remains the fallback. The wrapper is a
@@ -151,7 +153,8 @@
       <code>choose folder</code> dialog (osascript, defaulting to the Desktop) asks which folder holds
       the content; the loader copies that folder's contents. A folder path may instead be passed as the
       first argument &mdash; how the run-again restart reuses the same folder without re-prompting &mdash;
-      and text/SSH mode accepts a typed path.</li>
+      and text/SSH mode accepts a typed path. In <a href="#firmware">firmware-update mode</a>
+      (<code>--firmware</code>, terminal-only) this step instead selects a single firmware file.</li>
     <li><strong>Volume label prompt.</strong> Asks for the FAT label (default <code>PLAYER</code>); input
       is sanitized to <code>[A-Za-z0-9]</code>, uppercased, truncated to 11 chars. <code>REDO</code> is reserved.</li>
     <li><strong>Name mode.</strong> Optional per-run choice: keep original names, or rename every
@@ -244,6 +247,33 @@
     in one directory, a player that <em>name-sorts</em> instead of reading entry order will interleave
     the renamed files and the folders differently than the original names did.)
   </div>
+
+  <h2 id="firmware">4A. Firmware-update mode (advanced, terminal-only)</h2>
+  <p>Some players are firmware-updated by copying a <strong>single firmware file</strong> (typically a
+  <code>.ufw</code> file, though a maker may ship any extension) onto the root of an otherwise-empty
+  device, which self-installs on the next power-on. The <code>--firmware</code> flag reuses the entire
+  engine above — whole-disk erase, volume label, ordered copy, junk scrub, eject, parallel across every
+  selected device — but the <a href="#flow">manifest</a> is a single entry (the chosen file, written to
+  the volume root), so no folder walk, content check, simple-numbers renaming, or player profile applies.</p>
+  <ul>
+    <li><strong>Terminal-only by design.</strong> The double-click launcher never passes a flag, so
+      ordinary operators cannot reach this destructive re-imaging path by accident; it is invoked only as
+      <code>bash load_content.sh --firmware</code> (from the DMG,
+      <code>bash /Volumes/&lt;image&gt;/.loader/load_content.sh --firmware</code>). <code>--update-firmware</code>
+      and <code>--fw</code> are accepted aliases; <code>--help</code> lists all options.</li>
+    <li><strong>Source is a file, not a folder.</strong> The picker is a native <code>choose file</code>
+      dialog showing all files (so a non-<code>.ufw</code> file is selectable); text/SSH mode reads a typed
+      path; a path argument is accepted (and is how run-again reuses the same firmware file). The file's
+      containing directory becomes the source disk protected from erasure, exactly as a content folder would.</li>
+    <li><strong>Same safety guards.</strong> The two-step erase confirmation, disk-identity re-checks,
+      write-protect and source-disk exclusion, mount re-verification, and stall/disappearance handling are
+      all unchanged — firmware mode only substitutes <em>what</em> is written, never <em>how</em> a disk is
+      chosen or guarded.</li>
+    <li><strong>Post-run guidance.</strong> Because a firmware update re-images the device, the results
+      screen tells the operator to disconnect every device, power each on until it <em>stops beeping</em>
+      (the self-install), then reconnect them all and run the loader normally to reload audio content — a
+      firmware update leaves the device empty.</li>
+  </ul>
 
   <h2 id="guards">5. Safety guards &amp; rationale</h2>
   <p>These are the checks that matter for “is it safe to run/re-publish.” Most exist because an earlier
